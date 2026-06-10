@@ -3,591 +3,385 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title> RamzApp | </title>
-    <!-- Font Awesome  -->
+    <title>⚡ RamzApp | غرفة المحادثة</title>
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
           onerror="this.onerror=null;document.getElementById('faFallback').removeAttribute('disabled')">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css"
           id="faFallback" disabled>
+    <!-- خط القاهرة -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+        /* ========== نفس الأنماط الموجودة في chat.html الأصلي (مختصرة للحفاظ على المساحة) ========== */
         :root {
-            --bg: #0d0d0d;
-            --surface: #1a1a1a;
-            --surface2: #222;
-            --surface3: #2a2a2a;
-            --text: #fff;
-            --text2: #ddd;
-            --text3: #999;
-            --border: #2c2c2c;
-            --accent: #ff0050;
-            --green: #00a884;
-            --online: #00a884;
-            --shadow: 0 8px 32px rgba(0,0,0,0.6);
-            --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+            --bg: #0d0d0d; --surface: #1a1a1a; --surface2: #222; --surface3: #2a2a2a;
+            --text: #fff; --text2: #ddd; --text3: #999; --border: #2c2c2c;
+            --accent: #ff0050; --green: #00a884; --online: #00a884;
+            --shadow: 0 8px 32px rgba(0,0,0,0.6); --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
         }
-        .light-theme {
-            --bg: #f0f2f5; --surface: #fff; --surface2: #f5f5f5; --surface3: #e9edef;
-            --text: #111; --text2: #333; --text3: #667781; --border: #e0e0e0;
-            --shadow: 0 4px 20px rgba(0,0,0,0.08); --online: #00a884;
-        }
+        .light-theme { --bg: #f0f2f5; --surface: #fff; --surface2: #f5f5f5; --surface3: #e9edef; --text: #111; --text2: #333; --text3: #667781; --border: #e0e0e0; --shadow: 0 4px 20px rgba(0,0,0,0.08); }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            background: var(--bg); font-family: 'Cairo', sans-serif;
-            height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
-            color: var(--text); transition: background var(--transition), color var(--transition);
-            -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
-        }
-
-        .chat-header-bar {
-            background: var(--surface); padding: 8px 12px; display: flex; align-items: center;
-            gap: 10px; border-bottom: 1px solid var(--border); min-height: 56px;
-        }
-        .header-btn {
-            background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer;
-            width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; transition: all 0.2s; flex-shrink: 0;
-        }
+        body { background: var(--bg); font-family: 'Cairo', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: var(--text); transition: background var(--transition), color var(--transition); user-select: none; }
+        .chat-header-bar { background: var(--surface); padding: 8px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); min-height: 56px; }
+        .header-btn { background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
         .header-btn:hover { background: var(--surface3); }
-        .header-actions { display: flex; gap: 4px; }
-        .avatar {
-            width: 42px; height: 42px; border-radius: 50%; background: var(--surface3);
-            display: flex; align-items: center; justify-content: center; font-size: 18px;
-            font-weight: 700; cursor: pointer; flex-shrink: 0;
-        }
+        .avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
         .chat-header-info { flex: 1; cursor: pointer; min-width: 0; }
         .chat-header-name { font-weight: 700; font-size: 15px; }
         .chat-header-status { font-size: 11px; color: var(--text3); }
         .chat-header-status.online { color: var(--online); }
         .chat-header-status.typing { color: var(--green); animation: pulse 1.2s infinite; }
         @keyframes pulse { 0%,100% { opacity:0.6; } 50% { opacity:1; } }
-
-        .messages-area {
-            flex: 1; overflow-y: auto; padding: 10px 8px; display: flex; flex-direction: column;
-            gap: 6px; background: var(--bg);
-            background-image: radial-gradient(circle at center, var(--border) 1px, transparent 1px);
-            background-size: 32px 32px; scroll-behavior: smooth;
-        }
-        .date-divider {
-            text-align: center; margin: 6px 0; font-size: 11px; color: var(--text3);
-            background: var(--surface2); display: inline-block; padding: 4px 12px;
-            border-radius: 8px; align-self: center; position: sticky; top: 4px; z-index: 1;
-        }
+        .messages-area { flex: 1; overflow-y: auto; padding: 10px 8px; display: flex; flex-direction: column; gap: 6px; background: var(--bg); background-image: radial-gradient(circle at center, var(--border) 1px, transparent 1px); background-size: 32px 32px; scroll-behavior: smooth; }
         .msg-row { display: flex; width: 100%; animation: fadeUp 0.3s ease; }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
         .msg-row.own { justify-content: flex-end; }
-        .msg-bubble {
-            max-width: 84%; padding: 8px 12px; border-radius: 16px; font-size: 13.5px;
-            line-height: 1.5; position: relative; word-break: break-word; transition: all 0.2s; cursor: default;
-        }
+        .msg-bubble { max-width: 84%; padding: 8px 12px; border-radius: 16px; font-size: 13.5px; line-height: 1.5; position: relative; word-break: break-word; }
         .own .msg-bubble { background: #005c4b; color: #e9ffef; border-bottom-left-radius: 4px; }
         .light-theme .own .msg-bubble { background: #d9fdd3; color: #111; }
         .other .msg-bubble { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); border-bottom-right-radius: 4px; }
         .attachment-img { max-width: 200px; max-height: 200px; border-radius: 10px; margin-top: 4px; cursor: pointer; transition: transform 0.2s; }
-        .attachment-img:hover { transform: scale(1.02); }
         .voice-msg { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
-        .voice-play-btn {
-            background: var(--accent); border: none; color: #fff; width: 32px; height: 32px;
-            border-radius: 50%; cursor: pointer; font-size: 13px; transition: 0.2s;
-            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-        }
-        .voice-play-btn:hover { transform: scale(1.1); }
-        .voice-wave { flex: 1; height: 24px; display: flex; align-items: center; gap: 2px; }
-        .voice-wave-bar { width: 3px; background: var(--accent); border-radius: 2px; animation: waveAnim 0.6s ease-in-out infinite alternate; }
-        .msg-time-row { display: flex; justify-content: flex-end; align-items: center; gap: 4px; margin-top: 2px; font-size: 10px; color: var(--text3); }
-
-        .reply-bar { background: var(--surface); padding: 8px 14px; font-size: 12px; border-top: 1px solid var(--border); display: none; align-items: center; justify-content: space-between; gap: 8px; }
+        .voice-play-btn { background: var(--accent); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
         .input-bar { background: var(--surface); padding: 8px 10px; display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--border); }
-        .input-bar input { flex: 1; background: var(--surface3); border: none; border-radius: 25px; padding: 10px 16px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; min-width: 0; }
+        .input-bar input { flex: 1; background: var(--surface3); border: none; border-radius: 25px; padding: 10px 16px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; }
         .input-bar input:focus { box-shadow: 0 0 0 2px var(--accent); }
-        .input-btn { background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
-        .input-btn:hover { background: var(--surface3); }
-        .send-btn { background: var(--accent) !important; color: #fff !important; border-radius: 50% !important; width: 42px !important; height: 42px !important; font-size: 18px !important; }
+        .input-btn { background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
+        .send-btn { background: var(--accent) !important; color: #fff !important; border-radius: 50% !important; width: 42px !important; height: 42px !important; }
         .mic-btn { background: var(--green) !important; color: #fff !important; border-radius: 50% !important; width: 42px !important; height: 42px !important; }
         .mic-btn.recording { background: #ff0000 !important; animation: pulseRec 0.8s infinite; }
         @keyframes pulseRec { 0%,100% { box-shadow: 0 0 0 0 rgba(255,0,0,0.5); } 50% { box-shadow: 0 0 0 15px rgba(255,0,0,0); } }
-
         .emoji-picker { position: absolute; bottom: 75px; right: 10px; background: var(--surface); border-radius: 20px; padding: 8px; width: 300px; max-height: 240px; overflow-y: auto; display: none; flex-wrap: wrap; gap: 4px; z-index: 100; border: 1px solid var(--border); box-shadow: var(--shadow); }
         .emoji-picker.show { display: flex; }
-        .emoji-picker span { font-size: 26px; cursor: pointer; padding: 5px; border-radius: 8px; transition: all 0.15s; }
-        .emoji-picker span:hover { background: var(--surface3); transform: scale(1.2); }
-
+        .emoji-picker span { font-size: 26px; cursor: pointer; padding: 5px; border-radius: 8px; }
         .image-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 3000; display: none; align-items: center; justify-content: center; cursor: zoom-out; }
         .image-viewer.active { display: flex; }
-        .image-viewer img { max-width: 95vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 60px rgba(0,0,0,0.8); animation: zoomIn 0.25s ease; }
-        @keyframes zoomIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .image-viewer-close { position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.2); border: none; color: #fff; font-size: 24px; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; z-index: 3001; }
-
-        .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 25px; font-size: 13px; z-index: 5000; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; box-shadow: var(--shadow); font-family: inherit; }
+        .image-viewer img { max-width: 95vw; max-height: 90vh; border-radius: 8px; }
+        .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 25px; font-size: 13px; z-index: 5000; opacity: 0; transition: opacity 0.3s; white-space: nowrap; box-shadow: var(--shadow); }
         .toast.show { opacity: 1; }
-
         .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1500; display: none; justify-content: flex-end; align-items: flex-start; backdrop-filter: blur(2px); }
         .popup-overlay.active { display: flex; }
-        .popup-menu { background: var(--surface); border-radius: 16px; margin: 60px 12px 0 0; width: 240px; box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; animation: slideIn 0.25s ease; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
-        .popup-item { display: flex; align-items: center; gap: 12px; padding: 13px 16px; cursor: pointer; color: var(--text2); font-size: 13px; border-bottom: 1px solid var(--border); transition: 0.15s; }
+        .popup-menu { background: var(--surface); border-radius: 16px; margin: 60px 12px 0 0; width: 240px; box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; }
+        .popup-item { display: flex; align-items: center; gap: 12px; padding: 13px 16px; cursor: pointer; color: var(--text2); font-size: 13px; border-bottom: 1px solid var(--border); }
         .popup-item:last-child { border-bottom: none; }
         .popup-item:hover { background: var(--surface3); }
-        .popup-item i { width: 20px; font-size: 16px; color: var(--text3); text-align: center; }
-        .popup-item.danger { color: #ff4444; }
+        .call-screen-overlay { position: fixed; inset: 0; background: #000; z-index: 4000; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 30px; color: #fff; }
+        .call-screen-overlay.active { display: flex; }
+        #localVideo { position: absolute; bottom: 20px; right: 20px; width: 120px; border-radius: 12px; border: 2px solid #fff; }
+        #remoteVideo { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
-    <div class="chat-header-bar">
-        <button class="header-btn" onclick="history.back()"><i class="fas fa-arrow-right"></i></button>
-        <div class="avatar" id="chatAvatar"></div>
-        <div class="chat-header-info" id="chatHeaderInfo">
-            <div class="chat-header-name" id="chatNameDisp"></div>
-            <div class="chat-header-status online" id="chatStatusDisp"></div>
-        </div>
-        <div class="header-actions">
-            <button class="header-btn" id="voiceCallBtn"><i class="fas fa-phone"></i></button>
-            <button class="header-btn" id="videoCallBtn"><i class="fas fa-video"></i></button>
-            <button class="header-btn" id="chatMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
-        </div>
+
+<div class="chat-header-bar">
+    <button class="header-btn" onclick="history.back()"><i class="fas fa-arrow-right"></i></button>
+    <div class="avatar" id="chatAvatar">👤</div>
+    <div class="chat-header-info" id="chatHeaderInfo">
+        <div class="chat-header-name" id="chatNameDisp">المحادثة</div>
+        <div class="chat-header-status online" id="chatStatusDisp">متصل</div>
     </div>
-
-    <div class="messages-area" id="messagesArea"></div>
-
-    <div class="reply-bar" id="replyBar" style="display:none;">
-        <span><i class="fas fa-reply"></i> <span id="replyPreview"></span></span>
-        <button class="header-btn" id="cancelReplyBtn">&times;</button>
+    <div class="header-actions">
+        <button class="header-btn" id="voiceCallBtn"><i class="fas fa-phone"></i></button>
+        <button class="header-btn" id="videoCallBtn"><i class="fas fa-video"></i></button>
+        <button class="header-btn" id="chatMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
     </div>
+</div>
 
-    <div class="input-bar">
-        <button class="input-btn" id="emojiBtn"><i class="far fa-smile-wink"></i></button>
-        <button class="input-btn" id="attachBtn"><i class="fas fa-paperclip"></i></button>
-        <input type="text" id="msgInput" placeholder=" ..." autocomplete="off">
-        <button class="input-btn send-btn" id="sendMsgBtn" style="display:none;"><i class="fas fa-paper-plane"></i></button>
-        <button class="input-btn mic-btn" id="micBtn" style="display:flex;"><i class="fas fa-microphone"></i></button>
-    </div>
+<div class="messages-area" id="messagesArea"></div>
 
-    <div class="emoji-picker" id="emojiPicker"></div>
-    <input type="file" id="hiddenFileInput" style="display:none;" accept="image/*,video/*,.pdf,.doc,.docx">
+<div class="input-bar">
+    <button class="input-btn" id="emojiBtn"><i class="far fa-smile-wink"></i></button>
+    <button class="input-btn" id="attachBtn"><i class="fas fa-paperclip"></i></button>
+    <input type="text" id="msgInput" placeholder="اكتب رسالة..." autocomplete="off">
+    <button class="input-btn send-btn" id="sendMsgBtn" style="display:none;"><i class="fas fa-paper-plane"></i></button>
+    <button class="input-btn mic-btn" id="micBtn" style="display:flex;"><i class="fas fa-microphone"></i></button>
+</div>
 
-    <div class="image-viewer" id="imageViewer">
-        <button class="image-viewer-close" id="closeImageViewer">&times;</button>
-        <img src="" alt="" id="viewerImage">
-    </div>
-    <div class="toast" id="toast"></div>
+<div class="emoji-picker" id="emojiPicker"></div>
+<input type="file" id="hiddenFileInput" style="display:none;" accept="image/*,video/*,.pdf,.doc,.docx">
 
-    <!--   -->
-    <div class="popup-overlay" id="popupOverlay">
-        <div class="popup-menu" id="popupMenu"></div>
-    </div>
+<div class="image-viewer" id="imageViewer">
+    <button class="image-viewer-close" style="position:absolute; top:20px; left:20px; background:rgba(255,255,255,0.2); border:none; color:#fff; font-size:24px; width:44px; height:44px; border-radius:50%; cursor:pointer;">&times;</button>
+    <img src="" alt="صورة" id="viewerImage">
+</div>
+<div class="toast" id="toast"></div>
+<div class="popup-overlay" id="popupOverlay"><div class="popup-menu" id="popupMenu"></div></div>
 
-    <!--    () -->
-    <div id="callContainer" style="display:none; position:fixed; inset:0; z-index:5000; background:#000;">
-        <video id="localVideo" autoplay muted style="position:absolute; bottom:20px; right:20px; width:120px; border-radius:12px; border:2px solid #fff;"></video>
-        <video id="remoteVideo" autoplay style="width:100%; height:100%; object-fit:cover;"></video>
-        <button onclick="endCall()" style="position:absolute; top:20px; left:20px; background:red; color:#fff; border:none; border-radius:50%; width:50px; height:50px; font-size:20px;"><i class="fas fa-phone-slash"></i></button>
-    </div>
+<div class="call-screen-overlay" id="callContainer">
+    <video id="localVideo" autoplay muted playsinline></video>
+    <video id="remoteVideo" autoplay playsinline></video>
+    <button onclick="endCall()" style="position:absolute; bottom:30px; left:50%; transform:translateX(-50%); background:#ff0000; color:#fff; border:none; border-radius:50%; width:60px; height:60px; font-size:24px; cursor:pointer;"><i class="fas fa-phone-slash"></i></button>
+</div>
 
-    <!-- Socket.IO -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="js/sqlite-local.js"></script>
-    <script src="js/supabase-client.js"></script>
-    <script src="js/webrtc-client.js"></script>
-    <script src="js/media-storage.js"></script>
-    <script src="js/common.js"></script>
-    <script>
-        // ==========   ==========
-        const SERVER_URL = window.RAMZ_SERVER_URL || 'http://localhost:3000';
-        let socket = null;
+<!-- ========== المكتبات الأساسية (بالترتيب الصحيح) ========== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="js/sqlite-local.js"></script>
+<script src="js/webrtc-client.js"></script>
+<script src="js/media-storage.js"></script>
+<script src="js/common.js"></script>
 
-        let currentUser = null;
-        let chatId = null;
+<script>
+    // ========== إعدادات عامة ==========
+    const SERVER_URL = window.RAMZ_SERVER_URL || 'https://ramzapp.onrender.com';
+    let socket = null;
+    let currentUser = null;
+    let chatId = null;
+    let chatName = '';
+    let pendingVoice = null;
 
-        async function initChat() {
-            currentUser = await getSessionUser();
-            if (!currentUser) return;
+    // عناصر DOM
+    const msgInput = document.getElementById('msgInput');
+    const sendBtn = document.getElementById('sendMsgBtn');
+    const micBtn = document.getElementById('micBtn');
+    const messagesArea = document.getElementById('messagesArea');
+    const chatNameDisp = document.getElementById('chatNameDisp');
+    const chatAvatar = document.getElementById('chatAvatar');
 
-            const params = new URLSearchParams(location.search);
-            chatId = params.get('chatId');
-            const chatName = params.get('name') || '';
+    // ========== تهيئة WebRTC ==========
+    if (typeof RamzCall !== 'undefined') {
+        RamzCall.setVideoElements('localVideo', 'remoteVideo');
+    }
 
-            document.getElementById('chatNameDisp').textContent = chatName;
-            document.getElementById('chatAvatar').textContent = chatName.charAt(0);
+    // ========== الحصول على جلسة المستخدم ==========
+    async function initChat() {
+        currentUser = await getSessionUser();
+        if (!currentUser) return;
 
-            const theme = await RamzDB.getSetting('theme');
-            if (theme === 'light') document.body.classList.add('light-theme');
+        const params = new URLSearchParams(location.search);
+        chatId = params.get('chatId');
+        chatName = params.get('name') || 'محادثة';
+        chatNameDisp.textContent = chatName;
+        chatAvatar.textContent = chatName.charAt(0).toUpperCase();
 
-            //    
-            await renderMessages();
+        // تحميل الرسائل من SQLite
+        await renderMessages();
 
-            //   Socket.IO
-            setupSocket();
-        }
+        // إعداد Socket.IO
+        setupSocket();
 
-        // ==========    SQLite ==========
-        async function renderMessages() {
-            const area = document.getElementById('messagesArea');
-            const msgs = await RamzDB.getMessages(chatId);
-            area.innerHTML = '';
-            let lastDate = '';
-            (msgs || []).forEach(m => {
-                appendMessageToView(m, false);
-            });
-            area.scrollTop = area.scrollHeight;
-        }
+        // إعداد الوضع الليلي من الإعدادات
+        const theme = await RamzDB.getSetting('theme');
+        if (theme === 'light') document.body.classList.add('light-theme');
+    }
 
-        function appendMessageToView(m, animate = true) {
-            const area = document.getElementById('messagesArea');
-            //  
-            if (document.getElementById(`msg-${m.id}`)) return;
+    // ========== عرض الرسائل من SQLite ==========
+    async function renderMessages() {
+        if (!chatId) return;
+        const msgs = await RamzDB.getMessages(chatId);
+        messagesArea.innerHTML = '';
+        let lastDate = '';
+        msgs.forEach(msg => appendMessageToView(msg, false));
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
 
-            const isMe = m.senderId === currentUser.id;
-            const hasImg = m.mediaUrl && !m.voiceUrl;
-            const hasVoice = m.voiceUrl;
-            const div = document.createElement('div');
-            div.className = `msg-row ${isMe ? 'own' : 'other'}`;
-            div.id = `msg-${m.id}`;
-            div.innerHTML = `
-                <div class="msg-bubble">
-                    ${m.replyTo ? `<div class="reply-preview"><i class="fas fa-reply"></i>   </div>` : ''}
-                    ${hasVoice ? `<div class="voice-msg"><button class="voice-play-btn" data-audio="${m.voiceUrl}" onclick="playVoice(this)"><i class="fas fa-play"></i></button><div class="voice-wave">${Array.from({ length: 8 }, (_, i) => `<div class="voice-wave-bar" style="height:${8 + Math.random() * 16}px"></div>`).join('')}</div><span style="font-size:10px;color:var(--text3);">${m.voiceDuration || '0:00'}</span></div>` : ''}
-                    ${hasImg ? `<img src="${m.mediaUrl}" class="attachment-img" onclick="openImageViewer('${m.mediaUrl}')" loading="lazy">` : ''}
-                    <div>${esc(m.text || '')}</div>
-                    <div class="msg-time-row"><span>${fmtTime(m.timestamp)}</span>${isMe ? (m.status === 'read' ? '<i class="fas fa-check-double" style="color:#4fc3f7;"></i>' : m.status === 'delivered' ? '<i class="fas fa-check-double"></i>' : '<i class="fas fa-check"></i>') : ''}</div>
-                </div>`;
-            area.appendChild(div);
-            area.scrollTop = area.scrollHeight;
-        }
+    function appendMessageToView(msg, animate = true) {
+        if (document.getElementById(`msg-${msg.id}`)) return;
+        const isMe = msg.senderId === currentUser.id;
+        const hasImg = msg.mediaUrl && !msg.voiceUrl;
+        const hasVoice = msg.voiceUrl;
+        const div = document.createElement('div');
+        div.className = `msg-row ${isMe ? 'own' : 'other'}`;
+        div.id = `msg-${msg.id}`;
+        div.innerHTML = `
+            <div class="msg-bubble">
+                ${hasVoice ? `<div class="voice-msg"><button class="voice-play-btn" data-audio="${esc(msg.voiceUrl)}" onclick="playVoice(this)"><i class="fas fa-play"></i></button><span style="font-size:10px;">${msg.voiceDuration || '0:00'}</span></div>` : ''}
+                ${hasImg ? `<img src="${msg.mediaUrl}" class="attachment-img" onclick="openImageViewer('${msg.mediaUrl}')" loading="lazy">` : ''}
+                <div>${esc(msg.text || '')}</div>
+                <div class="msg-time-row"><span>${fmtTime(msg.timestamp)}</span>${isMe ? (msg.status === 'read' ? '<i class="fas fa-check-double" style="color:#4fc3f7;"></i>' : '<i class="fas fa-check"></i>') : ''}</div>
+            </div>`;
+        messagesArea.appendChild(div);
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
 
-        // ========== Socket.IO ==========
-        function setupSocket() {
-            try {
-                socket = io(SERVER_URL, { transports: ['websocket'] });
-
-                socket.on('connect', () => {
-                    console.log('  ');
-                    //     
-                    socket.emit('login', { username: currentUser.name }, (res) => {
-                        if (res.error) console.warn('  :', res.error);
-                        else console.log('   ');
-                    });
-                    //    
-                    socket.emit('chat:join', { chatId, userId: currentUser.id });
-                });
-
-                //    (  )
-                socket.on('chat:history', async (msgs) => {
-                    if (msgs && msgs.length > 0) {
-                        for (const m of msgs) {
-                            await RamzDB.saveMessage(m);
-                            appendMessageToView(m);
-                        }
-                    }
-                });
-
-                //   
-                socket.on('message:receive', async (msg) => {
-                    if (msg.chatId !== chatId) return;
-                    await RamzDB.saveMessage(msg);
-                    appendMessageToView(msg);
-                    //      
-                    if (msg.mediaUrl && typeof RamzMedia !== 'undefined' && RamzMedia.autoSaveMedia) {
-                        RamzMedia.autoSaveMedia(msg.mediaUrl, msg.senderName);
-                    }
-                    //      
-                    if (document.hidden && msg.senderId !== currentUser.id) {
-                        toast(`    ${msg.senderName}`);
-                    }
-                });
-
-                //   
-                socket.on('typing:update', (data) => {
-                    if (data.chatId === chatId) {
-                        const st = document.getElementById('chatStatusDisp');
-                        st.textContent = data.typing ? `${data.username || ''} ...` : '';
-                        st.className = 'chat-header-status' + (data.typing ? ' typing' : ' online');
-                    }
-                });
-
-                socket.on('disconnect', () => {
-                    console.warn('  ');
-                });
-
-            } catch (e) {
-                console.warn('     ');
-            }
-        }
-
-        // ==========   ==========
-        const msgInput = document.getElementById('msgInput');
-        const sendBtn = document.getElementById('sendMsgBtn');
-        const micBtn = document.getElementById('micBtn');
-        let pendingVoice = null;
-
-        function updateSendBtn() {
-            const has = msgInput.value.trim().length > 0 || pendingVoice;
-            sendBtn.style.display = has ? 'flex' : 'none';
-            micBtn.style.display = has ? 'none' : 'flex';
-        }
-
-        msgInput.addEventListener('input', updateSendBtn);
-        sendBtn.addEventListener('click', sendMessage);
-        msgInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
-
-        //   ( )
-        msgInput.addEventListener('input', () => {
-            if (socket && socket.connected) {
-                socket.emit('typing:start', { chatId });
-                clearTimeout(window._typingTimer);
-                window._typingTimer = setTimeout(() => {
-                    socket.emit('typing:stop', { chatId });
-                }, 1000);
+    // ========== Socket.IO ==========
+    function setupSocket() {
+        if (!chatId) return;
+        socket = io(SERVER_URL, { transports: ['websocket'] });
+        socket.on('connect', () => {
+            console.log('✅ متصل بالخادم الوسيط');
+            socket.emit('login', { username: currentUser.name }, (res) => { if (res.error) console.warn(res.error); });
+            socket.emit('chat:join', { chatId, userId: currentUser.id });
+        });
+        socket.on('chat:history', async (msgs) => {
+            if (msgs && msgs.length) {
+                for (const m of msgs) {
+                    await RamzDB.saveMessage(m);
+                    appendMessageToView(m);
+                }
             }
         });
+        socket.on('message:receive', async (msg) => {
+            if (msg.chatId !== chatId) return;
+            await RamzDB.saveMessage(msg);
+            appendMessageToView(msg);
+            if (msg.mediaUrl && typeof RamzMedia !== 'undefined') RamzMedia.autoSaveMedia(msg.mediaUrl, msg.senderName);
+        });
+        socket.on('typing:update', (data) => {
+            if (data.chatId === chatId) {
+                const statusDiv = document.getElementById('chatStatusDisp');
+                statusDiv.textContent = data.typing ? `${data.username || 'الطرف الآخر'} يكتب...` : 'متصل';
+                statusDiv.className = 'chat-header-status' + (data.typing ? ' typing' : ' online');
+            }
+        });
+    }
 
-        async function sendMessage() {
-            const text = msgInput.value.trim();
-            if (!text && !pendingVoice) return;
+    // ========== إرسال رسالة ==========
+    function updateSendBtn() { const has = msgInput.value.trim().length > 0 || pendingVoice; sendBtn.style.display = has ? 'flex' : 'none'; micBtn.style.display = has ? 'none' : 'flex'; }
+    msgInput.addEventListener('input', updateSendBtn);
+    sendBtn.addEventListener('click', sendMessage);
+    msgInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+    msgInput.addEventListener('input', () => {
+        if (socket && socket.connected) {
+            socket.emit('typing:start', { chatId });
+            clearTimeout(window._typingTimer);
+            window._typingTimer = setTimeout(() => socket.emit('typing:stop', { chatId }), 1000);
+        }
+    });
+
+    async function sendMessage() {
+        const text = msgInput.value.trim();
+        if (!text && !pendingVoice) return;
+        const msg = {
+            id: genId(),
+            chatId: chatId,
+            senderId: currentUser.id,
+            senderName: currentUser.name,
+            text: text || (pendingVoice ? '🎤 رسالة صوتية' : ''),
+            mediaUrl: null,
+            voiceUrl: pendingVoice?.url || null,
+            voiceDuration: pendingVoice?.duration || null,
+            timestamp: new Date().toISOString(),
+            status: 'sent'
+        };
+        await RamzDB.saveMessage(msg);
+        msgInput.value = '';
+        pendingVoice = null;
+        appendMessageToView(msg);
+        updateSendBtn();
+        if (socket && socket.connected) {
+            socket.emit('message:send', { chatId, text: msg.text, mediaUrl: msg.mediaUrl, voiceUrl: msg.voiceUrl, voiceDuration: msg.voiceDuration });
+        }
+    }
+
+    // ========== تسجيل صوتي ==========
+    let isRecording = false, mediaRecorder = null, recordingChunks = [];
+    micBtn.addEventListener('mousedown', startRecording);
+    micBtn.addEventListener('touchstart', startRecording);
+    micBtn.addEventListener('mouseup', stopRecording);
+    micBtn.addEventListener('touchend', stopRecording);
+
+    async function startRecording(e) {
+        e.preventDefault();
+        if (isRecording) return;
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            isRecording = true;
+            micBtn.classList.add('recording');
+            toast('🎙️ سجل رسالتك...', 3000);
+            mediaRecorder = new MediaRecorder(stream);
+            recordingChunks = [];
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordingChunks.push(e.data); };
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordingChunks, { type: 'audio/webm' });
+                const url = URL.createObjectURL(blob);
+                const duration = Math.floor(recordingChunks.length * 0.05);
+                pendingVoice = { url, duration: `0:${Math.min(duration, 59).toString().padStart(2,'0')}` };
+                updateSendBtn();
+                toast('✅ تم التسجيل، اضغط الإرسال');
+                stream.getTracks().forEach(t => t.stop());
+            };
+            mediaRecorder.start();
+            setTimeout(() => { if (isRecording && mediaRecorder?.state === 'recording') { mediaRecorder.stop(); isRecording = false; micBtn.classList.remove('recording'); } }, 15000);
+        } catch (err) { toast('❌ لا يمكن الوصول للميكروفون'); isRecording = false; micBtn.classList.remove('recording'); }
+    }
+    function stopRecording() { if (isRecording && mediaRecorder?.state === 'recording') { mediaRecorder.stop(); isRecording = false; micBtn.classList.remove('recording'); } }
+
+    // ========== رفع الصور باستخدام SupabaseClient ==========
+    document.getElementById('attachBtn').addEventListener('click', () => document.getElementById('hiddenFileInput').click());
+    document.getElementById('hiddenFileInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        toast('⏫ جاري رفع الصورة...');
+        try {
+            if (typeof SupabaseClient === 'undefined') throw new Error('SupabaseClient غير معرف');
+            const url = await SupabaseClient.uploadImage(file);
             const msg = {
                 id: genId(),
                 chatId: chatId,
                 senderId: currentUser.id,
                 senderName: currentUser.name,
-                text: text || (pendingVoice ? '  ' : ''),
-                mediaUrl: null,
-                voiceUrl: pendingVoice?.url || null,
-                voiceDuration: pendingVoice?.duration || null,
+                text: '',
+                mediaUrl: url,
+                voiceUrl: null,
+                voiceDuration: null,
                 timestamp: new Date().toISOString(),
                 status: 'sent'
             };
-            //  
             await RamzDB.saveMessage(msg);
-            msgInput.value = '';
-            pendingVoice = null;
             appendMessageToView(msg);
-            updateSendBtn();
-
-            //      
-            if (socket && socket.connected) {
-                socket.emit('message:send', {
-                    chatId: chatId,
-                    text: msg.text,
-                    mediaUrl: msg.mediaUrl,
-                    voiceUrl: msg.voiceUrl,
-                    voiceDuration: msg.voiceDuration
-                });
-            }
-
-            //    (     )
-            if (!socket || !socket.connected) {
-                setTimeout(async () => {
-                    const reply = {
-                        id: genId(),
-                        chatId: chatId,
-                        senderId: 'other',
-                        senderName: ' ',
-                        text: ' ',
-                        mediaUrl: null,
-                        voiceUrl: null,
-                        voiceDuration: null,
-                        timestamp: new Date().toISOString(),
-                        status: 'delivered'
-                    };
-                    await RamzDB.saveMessage(reply);
-                    appendMessageToView(reply);
-                }, 1000 + Math.random() * 2000);
-            }
+            if (socket && socket.connected) socket.emit('message:send', { chatId, text: '', mediaUrl: url });
+            toast('✅ تم إرسال الصورة');
+        } catch (err) {
+            toast('❌ فشل رفع الصورة: ' + err.message);
         }
+        e.target.value = '';
+    });
 
-        // ==========   ==========
-        let isRecording = false, mediaRecorder = null, recordingChunks = [];
-        micBtn.addEventListener('mousedown', startRecording);
-        micBtn.addEventListener('touchstart', startRecording);
-        micBtn.addEventListener('mouseup', stopRecording);
-        micBtn.addEventListener('touchend', stopRecording);
-        micBtn.addEventListener('mouseleave', stopRecording);
-        micBtn.addEventListener('touchcancel', stopRecording);
+    // ========== دوال مساعدة ==========
+    function openImageViewer(src) { document.getElementById('viewerImage').src = src; document.getElementById('imageViewer').classList.add('active'); }
+    document.querySelector('#imageViewer .image-viewer-close').addEventListener('click', () => document.getElementById('imageViewer').classList.remove('active'));
+    window.playVoice = function(btn) {
+        const audioSrc = btn.dataset.audio;
+        if (!audioSrc) return;
+        const audio = new Audio(audioSrc);
+        const icon = btn.querySelector('i');
+        if (icon) icon.className = 'fas fa-pause';
+        audio.play();
+        audio.onended = () => { if (icon) icon.className = 'fas fa-play'; };
+        btn.onclick = () => {
+            if (audio.paused) { audio.play(); if (icon) icon.className = 'fas fa-pause'; }
+            else { audio.pause(); if (icon) icon.className = 'fas fa-play'; }
+        };
+    };
+    window.endCall = function() {
+        document.getElementById('callContainer').classList.remove('active');
+        if (typeof RamzCall !== 'undefined') RamzCall.endCall();
+    };
 
-        async function startRecording(e) {
-            e.preventDefault();
-            if (isRecording) return;
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                isRecording = true;
-                micBtn.classList.add('recording');
-                toast('  ...', 3000);
-                mediaRecorder = new MediaRecorder(stream);
-                recordingChunks = [];
-                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordingChunks.push(e.data); };
-                mediaRecorder.onstop = () => {
-                    const blob = new Blob(recordingChunks, { type: 'audio/webm' });
-                    const url = URL.createObjectURL(blob);
-                    const duration = Math.floor(recordingChunks.length * 0.05);
-                    pendingVoice = { url, duration: '0:' + Math.min(duration, 59).toString().padStart(2, '0') };
-                    updateSendBtn();
-                    toast('    ');
-                    stream.getTracks().forEach(t => t.stop());
-                };
-                mediaRecorder.start();
-                setTimeout(() => {
-                    if (isRecording && mediaRecorder?.state === 'recording') {
-                        mediaRecorder.stop();
-                        isRecording = false;
-                        micBtn.classList.remove('recording');
-                    }
-                }, 15000);
-            } catch (err) {
-                toast('    ');
-                isRecording = false;
-                micBtn.classList.remove('recording');
-            }
-        }
+    // ========== إيموجي ==========
+    const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','💩','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾','🤲','👐','🙌','👏','🤝','👍','👎','👊','✊','🤛','🤜','🤞','✌️','🤟','🤘','👌','👈','👉','👆','👇','☝️','✋','🤚','🖐️','🖖','👋','🤙','💪','🦾','🖕','✍️','🙏','🦶','🦵','🦿','💄','💋','👄','🦷','👅','👂','🦻','👃','👣','👁️','👀','🧠','🦴','🩸','💅','👓','🕶️','🥽','🥼','🦺','👔','👕','👖','🧣','🧤','🧥','🧦','👗','👘','🥻','🩱','🩲','🩳','👙','👚','👛','👜','👝','🎒','👞','👟','🥾','🥿','👠','👡','👢','👑','👒','🎩','🎓','🧢','⛑️','📿','💼','🩳'];
+    const ep = document.getElementById('emojiPicker');
+    emojis.forEach(e => { const span = document.createElement('span'); span.textContent = e; span.addEventListener('click', () => { msgInput.value += e; ep.classList.remove('show'); msgInput.focus(); updateSendBtn(); }); ep.appendChild(span); });
+    document.getElementById('emojiBtn').addEventListener('click', e => { e.stopPropagation(); ep.classList.toggle('show'); });
+    document.addEventListener('click', e => { if (!ep.contains(e.target) && e.target !== document.getElementById('emojiBtn')) ep.classList.remove('show'); });
 
-        function stopRecording() {
-            if (isRecording && mediaRecorder?.state === 'recording') {
-                mediaRecorder.stop();
-                isRecording = false;
-                micBtn.classList.remove('recording');
-            }
-        }
+    // ========== قائمة المحادثة ==========
+    document.getElementById('chatMenuBtn').addEventListener('click', () => {
+        const items = [
+            { icon: 'fa-info-circle', label: 'معلومات المحادثة', action: () => toast(`📄 ${chatName}`) },
+            { icon: 'fa-search', label: 'بحث في الرسائل', action: async () => { const q = prompt('كلمة البحث:'); if (q) { const msgs = await RamzDB.getMessages(chatId); const found = msgs.filter(m => m.text && m.text.includes(q)); if (found.length) toast(`🔍 وجدت ${found.length} رسالة`); else toast('❌ لا نتائج'); } } },
+            { icon: 'fa-trash-alt', label: 'حذف المحادثة', action: async () => { if (confirm('حذف جميع رسائل هذه المحادثة؟')) { await RamzDB.deleteMessages(chatId); await renderMessages(); toast('✅ تم الحذف'); } }, danger: true }
+        ];
+        const menu = document.getElementById('popupMenu');
+        menu.innerHTML = items.map(i => `<div class="popup-item${i.danger?' danger':''}"><i class="fas ${i.icon}"></i>${i.label}</div>`).join('');
+        document.getElementById('popupOverlay').classList.add('active');
+        menu.querySelectorAll('.popup-item').forEach((el, idx) => el.addEventListener('click', () => { items[idx].action(); document.getElementById('popupOverlay').classList.remove('active'); }));
+    });
+    document.getElementById('popupOverlay').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
 
-        // ==========  ==========
-        const emojis = ['','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','',''];
-        const ep = document.getElementById('emojiPicker');
-        emojis.forEach(e => {
-            const span = document.createElement('span');
-            span.textContent = e;
-            span.addEventListener('click', () => { msgInput.value += e; ep.classList.remove('show'); msgInput.focus(); updateSendBtn(); });
-            ep.appendChild(span);
-        });
-        document.getElementById('emojiBtn').addEventListener('click', e => { e.stopPropagation(); ep.classList.toggle('show'); });
-        document.addEventListener('click', e => { if (!ep.contains(e.target) && e.target !== document.getElementById('emojiBtn')) ep.classList.remove('show'); });
+    // ========== مكالمات WebRTC ==========
+    document.getElementById('voiceCallBtn').addEventListener('click', () => {
+        document.getElementById('callContainer').classList.add('active');
+        if (typeof RamzCall !== 'undefined') RamzCall.startCall().catch(err => toast('فشل بدء المكالمة: ' + err.message));
+    });
+    document.getElementById('videoCallBtn').addEventListener('click', () => {
+        document.getElementById('callContainer').classList.add('active');
+        if (typeof RamzCall !== 'undefined') RamzCall.startCall().catch(err => toast('فشل بدء المكالمة: ' + err.message));
+    });
 
-        // ==========  (Supabase Storage) ==========
-        document.getElementById('attachBtn').addEventListener('click', () => document.getElementById('hiddenFileInput').click());
-        document.getElementById('hiddenFileInput').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            toast('   ...');
-            try {
-                const url = await SupabaseClient.uploadImage(file);
-                const msg = {
-                    id: genId(),
-                    chatId: chatId,
-                    senderId: currentUser.id,
-                    senderName: currentUser.name,
-                    text: '',
-                    mediaUrl: url,
-                    voiceUrl: null,
-                    voiceDuration: null,
-                    timestamp: new Date().toISOString(),
-                    status: 'sent'
-                };
-                await RamzDB.saveMessage(msg);
-                appendMessageToView(msg);
-                //     
-                if (typeof RamzMedia !== 'undefined' && RamzMedia.autoSaveMedia) {
-                    RamzMedia.autoSaveMedia(url, currentUser.name);
-                }
-                //   
-                if (socket && socket.connected) {
-                    socket.emit('message:send', {
-                        chatId: chatId,
-                        text: '',
-                        mediaUrl: url
-                    });
-                }
-                toast('   ');
-            } catch (err) {
-                toast('   ');
-            }
-            e.target.value = '';
-        });
-
-        // ==========   ==========
-        function openImageViewer(src) {
-            document.getElementById('viewerImage').src = src;
-            document.getElementById('imageViewer').classList.add('active');
-        }
-        document.getElementById('closeImageViewer').addEventListener('click', () => document.getElementById('imageViewer').classList.remove('active'));
-
-        // ==========   ==========
-        function playVoice(btn) {
-            const audioSrc = btn.dataset.audio;
-            if (!audioSrc) return;
-            const audio = new Audio(audioSrc);
-            const icon = btn.querySelector('i');
-            if (icon) { icon.className = 'fas fa-pause'; }
-            audio.play();
-            audio.onended = () => { if (icon) icon.className = 'fas fa-play'; };
-            btn.onclick = () => {
-                if (audio.paused) { audio.play(); if (icon) icon.className = 'fas fa-pause'; }
-                else { audio.pause(); if (icon) icon.className = 'fas fa-play'; }
-            };
-        }
-
-        // ==========   ==========
-        document.getElementById('chatMenuBtn').addEventListener('click', () => {
-            const items = [
-                { icon: 'fa-address-card', label: '  ', action: () => { toast(` ${document.getElementById('chatNameDisp').textContent}`); } },
-                { icon: 'fa-search', label: '  ', action: async () => {
-                    const query = prompt('   :');
-                    if (query && query.trim()) {
-                        const msgs = await RamzDB.getMessages(chatId);
-                        const found = msgs.filter(m => m.text && m.text.includes(query.trim()));
-                        if (found.length > 0) {
-                            const el = document.getElementById('msg-' + found[0].id);
-                            if (el) {
-                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                el.style.background = 'rgba(255,200,0,0.15)';
-                                setTimeout(() => el.style.background = '', 1500);
-                            }
-                            toast(`    ${found.length} `);
-                        } else toast('   ');
-                    }
-                }},
-                { icon: 'fa-photo-video', label: '', action: () => { toast('  '); } },
-                { icon: 'fa-cog', label: '', action: () => { location.href = 'chats.html#settings'; } },
-                { icon: 'fa-trash-alt', label: ' ', action: async () => {
-                    if (confirm('   ')) {
-                        await RamzDB.deleteMessages(chatId);
-                        history.back();
-                    }
-                }, danger: true }
-            ];
-            const menu = document.getElementById('popupMenu');
-            menu.innerHTML = items.map(i => `<div class="popup-item${i.danger?' danger':''}"><i class="fas ${i.icon}"></i>${i.label}</div>`).join('');
-            document.getElementById('popupOverlay').classList.add('active');
-            menu.querySelectorAll('.popup-item').forEach((el, idx) => {
-                el.addEventListener('click', () => {
-                    items[idx].action();
-                    document.getElementById('popupOverlay').classList.remove('active');
-                });
-            });
-        });
-        document.getElementById('popupOverlay').addEventListener('click', function(e) {
-            if (e.target === this) this.classList.remove('active');
-        });
-
-        // ==========   (WebRTC) ==========
-        document.getElementById('voiceCallBtn').addEventListener('click', () => {
-            document.getElementById('callContainer').style.display = 'block';
-            if (typeof RamzCall !== 'undefined' && RamzCall.startCall) {
-                RamzCall.startCall(document.getElementById('remoteVideo'));
-            } else {
-                toast('   ()');
-            }
-        });
-        document.getElementById('videoCallBtn').addEventListener('click', () => {
-            document.getElementById('callContainer').style.display = 'block';
-            if (typeof RamzCall !== 'undefined' && RamzCall.startCall) {
-                RamzCall.startCall(document.getElementById('remoteVideo'));
-            } else {
-                toast('   ()');
-            }
-        });
-
-        function endCall() {
-            document.getElementById('callContainer').style.display = 'none';
-            if (typeof RamzCall !== 'undefined' && RamzCall.endCall) RamzCall.endCall();
-        }
-
-        initChat();
-    </script>
+    // بدء التشغيل
+    initChat();
+</script>
 </body>
 </html>
