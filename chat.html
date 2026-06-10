@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>💬 RamzApp | المحادثة</title>
-    <!-- Font Awesome خالص -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-          onerror="this.onerror=null;document.getElementById('faFallback').removeAttribute('disabled')">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css"
-          id="faFallback" disabled>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -175,43 +172,45 @@
         <div class="popup-menu" id="popupMenu"></div>
     </div>
 
-    <!-- Socket.IO -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- سكربتات أساسية -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/sqlite-local.js"></script>
     <script src="js/supabase-client.js"></script>
     <script src="js/media-storage.js"></script>
-    <script>
-        // ========== إعدادات الخادم ==========
-        const SERVER_URL = window.RAMZ_SERVER_URL || 'https://ramzapp.onrender.com';
-        let socket = null;
 
+    <script>
+        // ========== المتغيرات العامة ==========
+        let realtimeChannel = null;
         let currentUser = null;
         let chatId = null;
+        let pendingVoice = null;
+        let pendingMediaUrl = null;
+        let replyToMsg = null;
 
-        async function initChat() {
-            // استعادة المستخدم من localStorage
-            const saved = localStorage.getItem('ramz_user');
-            if (!saved) { location.href = 'login.html'; return; }
-            currentUser = JSON.parse(saved);
-
-            const params = new URLSearchParams(location.search);
-            chatId = params.get('chatId');
-            const chatName = params.get('name') || 'محادثة';
-
-            document.getElementById('chatNameDisp').textContent = chatName;
-            document.getElementById('chatAvatar').textContent = chatName.charAt(0);
-
-            const theme = await RamzDB.getSetting('theme');
-            if (theme === 'light') document.body.classList.add('light-theme');
-
-            // عرض الرسائل المحلية أولاً
-            await renderMessages();
-
-            // إعداد اتصال Socket.IO
-            setupSocket();
+        // ========== دوال مساعدة ==========
+        function toast(msg, dur=2000) {
+            const t = document.getElementById('toast');
+            if (!t) return;
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._tid);
+            t._tid = setTimeout(() => t.classList.remove('show'), dur);
         }
 
-        // ========== عرض الرسائل من SQLite ==========
+        function esc(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[m]);
+        }
+
+        function genId() {
+            return 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+        }
+
+        function fmtTime(d) {
+            return new Date(d).toLocaleTimeString('ar-SA', { hour:'2-digit', minute:'2-digit' });
+        }
+
+        // ========== عرض الرسائل من SQLite المحلي ==========
         async function renderMessages() {
             const area = document.getElementById('messagesArea');
             const msgs = await RamzDB.getMessages(chatId);
@@ -227,17 +226,19 @@
             const area = document.getElementById('messagesArea');
             if (document.getElementById(`msg-${m.id}`)) return;
 
-            const isMe = m.senderId === currentUser.id;
+            const isMe = (m.senderId === currentUser.id);
             const hasImg = m.mediaUrl && !m.voiceUrl;
             const hasVoice = m.voiceUrl;
             const div = document.createElement('div');
             div.className = `msg-row ${isMe ? 'own' : 'other'}`;
             div.id = `msg-${m.id}`;
+            // نستخدم localMediaUrl إن وجدت (للملفات المحملة محلياً) وإلا mediaUrl
+            const displayMediaUrl = m.localMediaUrl || m.mediaUrl;
             div.innerHTML = `
                 <div class="msg-bubble">
                     ${m.replyTo ? `<div class="reply-preview"><i class="fas fa-reply"></i> رد على رسالة</div>` : ''}
-                    ${hasVoice ? `<div class="voice-msg"><button class="voice-play-btn" data-audio="${m.voiceUrl}" onclick="playVoice(this)"><i class="fas fa-play"></i></button><div class="voice-wave">${Array.from({ length: 8 }, (_, i) => `<div class="voice-wave-bar" style="height:${8 + Math.random() * 16}px"></div>`).join('')}</div><span style="font-size:10px;color:var(--text3);">${m.voiceDuration || '0:00'}</span></div>` : ''}
-                    ${hasImg ? `<img src="${m.mediaUrl}" class="attachment-img" onclick="openImageViewer('${m.mediaUrl}')" loading="lazy">` : ''}
+                    ${hasVoice ? `<div class="voice-msg"><button class="voice-play-btn" data-audio="${m.voiceUrl}" onclick="playVoice(this)"><i class="fas fa-play"></i></button><div class="voice-wave">${Array.from({ length: 8 }, () => `<div class="voice-wave-bar" style="height:${8 + Math.random() * 16}px"></div>`).join('')}</div><span style="font-size:10px;color:var(--text3);">${m.voiceDuration || '0:00'}</span></div>` : ''}
+                    ${hasImg ? `<img src="${displayMediaUrl}" class="attachment-img" onclick="openImageViewer('${displayMediaUrl}')" loading="lazy">` : ''}
                     <div>${esc(m.text || '')}</div>
                     <div class="msg-time-row"><span>${fmtTime(m.timestamp)}</span>${isMe ? (m.status === 'read' ? '<i class="fas fa-check-double" style="color:#4fc3f7;"></i>' : m.status === 'delivered' ? '<i class="fas fa-check-double"></i>' : '<i class="fas fa-check"></i>') : ''}</div>
                 </div>`;
@@ -245,143 +246,168 @@
             area.scrollTop = area.scrollHeight;
         }
 
-        // ========== Socket.IO ==========
-        function setupSocket() {
-            try {
-                socket = io(SERVER_URL, { transports: ['websocket'] });
+        // ========== معالج الصور والوسائط ==========
+        function openImageViewer(src) {
+            const viewer = document.getElementById('imageViewer');
+            const img = document.getElementById('viewerImage');
+            img.src = src;
+            viewer.classList.add('active');
+        }
+        document.getElementById('closeImageViewer').addEventListener('click', () => {
+            document.getElementById('imageViewer').classList.remove('active');
+        });
 
-                socket.on('connect', () => {
-                    console.log('✅ متصل بالخادم');
-                    socket.emit('login', { username: currentUser.name }, (res) => {
-                        if (res.error) console.warn('فشل تسجيل الدخول:', res.error);
-                    });
-                    socket.emit('chat:join', { chatId, userId: currentUser.id });
-                });
+        window.playVoice = function(btn) {
+            const audioSrc = btn.dataset.audio;
+            if (!audioSrc) return;
+            const audio = new Audio(audioSrc);
+            const icon = btn.querySelector('i');
+            if (icon) icon.className = 'fas fa-pause';
+            audio.play();
+            audio.onended = () => { if (icon) icon.className = 'fas fa-play'; };
+            btn.onclick = () => {
+                if (audio.paused) { audio.play(); if (icon) icon.className = 'fas fa-pause'; }
+                else { audio.pause(); if (icon) icon.className = 'fas fa-play'; }
+            };
+        };
 
-                socket.on('chat:history', async (msgs) => {
-                    if (msgs && msgs.length > 0) {
-                        for (const m of msgs) {
-                            await RamzDB.saveMessage(m);
-                            appendMessageToView(m);
-                        }
-                    }
-                });
-
-                socket.on('message:receive', async (msg) => {
-                    if (msg.chatId !== chatId) return;
-                    await RamzDB.saveMessage(msg);
-                    appendMessageToView(msg);
-                    if (msg.mediaUrl && typeof RamzMedia !== 'undefined' && RamzMedia.autoSaveMedia) {
-                        RamzMedia.autoSaveMedia(msg.mediaUrl, msg.senderName);
-                    }
-                    if (document.hidden && msg.senderId !== currentUser.id) {
-                        toast(`📩 رسالة جديدة من ${msg.senderName}`);
-                    }
-                });
-
-                socket.on('typing:update', (data) => {
-                    if (data.chatId === chatId) {
-                        const st = document.getElementById('chatStatusDisp');
-                        st.textContent = data.typing ? `${data.username || 'المستخدم'} يكتب...` : 'متصل';
-                        st.className = 'chat-header-status' + (data.typing ? ' typing' : ' online');
-                    }
-                });
-
-                socket.on('disconnect', () => {
-                    console.warn('انقطع الاتصال بالخادم');
-                });
-
-            } catch (e) {
-                console.warn('تعذر الاتصال بالخادم، العمل محلياً فقط');
+        // ========== Supabase Realtime (خادم وسيط ناقل) ==========
+        async function setupRealtime() {
+            if (!window.SupabaseClient) {
+                toast('⚠️ SupabaseClient not loaded');
+                return;
             }
+            const channelName = `chat:${chatId}`;
+            realtimeChannel = window.SupabaseClient.getRealtimeChannel(channelName);
+
+            // استقبال الرسائل
+            realtimeChannel.on('broadcast', { event: 'message' }, async (payload) => {
+                const msg = payload.payload;
+                // حفظ في SQLite المحلي
+                await RamzDB.saveMessage(msg);
+                appendMessageToView(msg);
+
+                // إذا كانت تحتوي على وسائط من التخزين المؤقت لـ Supabase، نقوم بتحميلها وحفظها محلياً ثم حذفها من الخادم
+                if (msg.mediaUrl && msg.mediaUrl.includes('/ramz-temp/')) {
+                    try {
+                        const response = await fetch(msg.mediaUrl);
+                        const blob = await response.blob();
+                        const fileName = msg.mediaUrl.split('/').pop();
+                        if (window.RamzMedia && RamzMedia.saveMediaToFolder) {
+                            const saved = await RamzMedia.saveMediaToFolder(fileName, blob);
+                            if (saved) {
+                                const localUrl = URL.createObjectURL(blob);
+                                msg.localMediaUrl = localUrl;
+                                // تحديث واجهة العرض
+                                const msgDiv = document.getElementById(`msg-${msg.id}`);
+                                if (msgDiv) {
+                                    const img = msgDiv.querySelector('.attachment-img');
+                                    if (img) img.src = localUrl;
+                                }
+                                // حفظ الرسالة مرة أخرى مع localMediaUrl? لا داعي، سنعتمد على SQLite بدون تخزين url محلي، فقط للعرض
+                                // ولكن يمكن تحديث mediaUrl إلى blob:? الأفضل عدم حفظ blob في SQLite.
+                            }
+                        }
+                        // حذف الملف من التخزين المؤقت بعد تحميله
+                        const filePath = msg.mediaUrl.split('/ramz-temp/')[1];
+                        if (filePath) {
+                            await window.SupabaseClient.deleteTempFile(filePath);
+                        }
+                    } catch (err) {
+                        console.warn('فشل تحميل الملف المؤقت:', err);
+                    }
+                }
+
+                if (document.hidden && msg.senderId !== currentUser.id) {
+                    toast(`📩 رسالة جديدة من ${msg.senderName}`);
+                }
+            });
+
+            // استقبال حالة الكتابة
+            realtimeChannel.on('broadcast', { event: 'typing' }, (payload) => {
+                const { typing, username } = payload.payload;
+                const statusDiv = document.getElementById('chatStatusDisp');
+                if (typing) {
+                    statusDiv.textContent = `${username || 'المستخدم'} يكتب...`;
+                    statusDiv.className = 'chat-header-status typing';
+                } else {
+                    statusDiv.textContent = 'متصل';
+                    statusDiv.className = 'chat-header-status online';
+                }
+            });
+
+            await realtimeChannel.subscribe();
+            console.log('✅ متصل بقناة Broadcast:', channelName);
         }
 
         // ========== إرسال رسالة ==========
-        const msgInput = document.getElementById('msgInput');
-        const sendBtn = document.getElementById('sendMsgBtn');
-        const micBtn = document.getElementById('micBtn');
-        let pendingVoice = null;
-
-        function updateSendBtn() {
-            const has = msgInput.value.trim().length > 0 || pendingVoice;
-            sendBtn.style.display = has ? 'flex' : 'none';
-            micBtn.style.display = has ? 'none' : 'flex';
-        }
-
-        msgInput.addEventListener('input', updateSendBtn);
-        sendBtn.addEventListener('click', sendMessage);
-        msgInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
-
-        msgInput.addEventListener('input', () => {
-            if (socket && socket.connected) {
-                socket.emit('typing:start', { chatId });
-                clearTimeout(window._typingTimer);
-                window._typingTimer = setTimeout(() => {
-                    socket.emit('typing:stop', { chatId });
-                }, 1000);
-            }
-        });
-
         async function sendMessage() {
-            const text = msgInput.value.trim();
-            if (!text && !pendingVoice) return;
+            const text = document.getElementById('msgInput').value.trim();
+            if (!text && !pendingVoice && !pendingMediaUrl) return;
+
             const msg = {
                 id: genId(),
                 chatId: chatId,
                 senderId: currentUser.id,
                 senderName: currentUser.name,
                 text: text || (pendingVoice ? '🎤 رسالة صوتية' : ''),
-                mediaUrl: null,
+                mediaUrl: pendingMediaUrl || null,
                 voiceUrl: pendingVoice?.url || null,
                 voiceDuration: pendingVoice?.duration || null,
+                replyTo: replyToMsg ? replyToMsg.id : null,
                 timestamp: new Date().toISOString(),
                 status: 'sent'
             };
+
+            // حفظ محلياً أولاً
             await RamzDB.saveMessage(msg);
-            msgInput.value = '';
-            pendingVoice = null;
             appendMessageToView(msg);
+
+            // تنظيف المدخلات
+            document.getElementById('msgInput').value = '';
+            if (pendingVoice) {
+                pendingVoice = null;
+            }
+            if (pendingMediaUrl) {
+                pendingMediaUrl = null;
+            }
+            if (replyToMsg) {
+                document.getElementById('replyBar').style.display = 'none';
+                replyToMsg = null;
+            }
             updateSendBtn();
 
-            if (socket && socket.connected) {
-                socket.emit('message:send', {
-                    chatId: chatId,
-                    text: msg.text,
-                    mediaUrl: msg.mediaUrl,
-                    voiceUrl: msg.voiceUrl,
-                    voiceDuration: msg.voiceDuration
+            // إرسال عبر Broadcast
+            if (realtimeChannel) {
+                realtimeChannel.send({
+                    type: 'broadcast',
+                    event: 'message',
+                    payload: msg
                 });
-            }
-
-            // محاكاة رد تلقائي (فقط في حالة عدم وجود خادم)
-            if (!socket || !socket.connected) {
-                setTimeout(async () => {
-                    const reply = {
-                        id: genId(),
-                        chatId: chatId,
-                        senderId: 'other',
-                        senderName: 'الطرف الآخر',
-                        text: '👍 تم',
-                        mediaUrl: null,
-                        voiceUrl: null,
-                        voiceDuration: null,
-                        timestamp: new Date().toISOString(),
-                        status: 'delivered'
-                    };
-                    await RamzDB.saveMessage(reply);
-                    appendMessageToView(reply);
-                }, 1000 + Math.random() * 2000);
             }
         }
 
-        // ========== تسجيل صوتي ==========
-        let isRecording = false, mediaRecorder = null, recordingChunks = [];
-        micBtn.addEventListener('mousedown', startRecording);
-        micBtn.addEventListener('touchstart', startRecording);
-        micBtn.addEventListener('mouseup', stopRecording);
-        micBtn.addEventListener('touchend', stopRecording);
-        micBtn.addEventListener('mouseleave', stopRecording);
-        micBtn.addEventListener('touchcancel', stopRecording);
+        // ========== رفع المرفقات عبر Supabase Storage المؤقت ==========
+        async function uploadAndSendFile(file) {
+            toast('⏳ جاري رفع الملف مؤقتاً...');
+            try {
+                const { publicUrl, fileName } = await window.SupabaseClient.uploadTempFile(file);
+                pendingMediaUrl = publicUrl;
+                toast('✅ تم رفع الملف، اضغط إرسال');
+                updateSendBtn();
+                // حذف الملف من الخادم بعد 10 دقائق كإجراء احتياطي إذا لم يحمله الطرف الآخر
+                setTimeout(() => {
+                    window.SupabaseClient.deleteTempFile(fileName).catch(console.warn);
+                }, 10 * 60 * 1000);
+            } catch (err) {
+                toast('❌ فشل رفع الملف: ' + err.message);
+            }
+        }
+
+        // ========== التسجيل الصوتي (يبقى محلياً) ==========
+        let isRecording = false;
+        let mediaRecorder = null;
+        let recordingChunks = [];
 
         async function startRecording(e) {
             e.preventDefault();
@@ -389,8 +415,9 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 isRecording = true;
+                const micBtn = document.getElementById('micBtn');
                 micBtn.classList.add('recording');
-                toast('🎤 جاري التسجيل...', 3000);
+                toast('🎤 جاري التسجيل...');
                 mediaRecorder = new MediaRecorder(stream);
                 recordingChunks = [];
                 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordingChunks.push(e.data); };
@@ -414,7 +441,7 @@
             } catch (err) {
                 toast('⚠️ لا يمكن الوصول للميكروفون');
                 isRecording = false;
-                micBtn.classList.remove('recording');
+                document.getElementById('micBtn').classList.remove('recording');
             }
         }
 
@@ -422,8 +449,44 @@
             if (isRecording && mediaRecorder?.state === 'recording') {
                 mediaRecorder.stop();
                 isRecording = false;
-                micBtn.classList.remove('recording');
+                document.getElementById('micBtn').classList.remove('recording');
             }
+        }
+
+        const micBtnElem = document.getElementById('micBtn');
+        micBtnElem.addEventListener('mousedown', startRecording);
+        micBtnElem.addEventListener('touchstart', startRecording);
+        micBtnElem.addEventListener('mouseup', stopRecording);
+        micBtnElem.addEventListener('touchend', stopRecording);
+        micBtnElem.addEventListener('mouseleave', stopRecording);
+        micBtnElem.addEventListener('touchcancel', stopRecording);
+
+        // ========== حالة الكتابة ==========
+        const msgInputElem = document.getElementById('msgInput');
+        msgInputElem.addEventListener('input', () => {
+            if (realtimeChannel) {
+                realtimeChannel.send({
+                    type: 'broadcast',
+                    event: 'typing',
+                    payload: { typing: true, username: currentUser.name }
+                });
+                clearTimeout(window._typingTimer);
+                window._typingTimer = setTimeout(() => {
+                    if (realtimeChannel) {
+                        realtimeChannel.send({
+                            type: 'broadcast',
+                            event: 'typing',
+                            payload: { typing: false }
+                        });
+                    }
+                }, 1000);
+            }
+        });
+
+        function updateSendBtn() {
+            const has = msgInputElem.value.trim().length > 0 || pendingVoice || pendingMediaUrl;
+            document.getElementById('sendMsgBtn').style.display = has ? 'flex' : 'none';
+            micBtnElem.style.display = has ? 'none' : 'flex';
         }
 
         // ========== إيموجي ==========
@@ -432,68 +495,32 @@
         emojis.forEach(e => {
             const span = document.createElement('span');
             span.textContent = e;
-            span.addEventListener('click', () => { msgInput.value += e; ep.classList.remove('show'); msgInput.focus(); updateSendBtn(); });
+            span.addEventListener('click', () => {
+                msgInputElem.value += e;
+                ep.classList.remove('show');
+                msgInputElem.focus();
+                updateSendBtn();
+            });
             ep.appendChild(span);
         });
-        document.getElementById('emojiBtn').addEventListener('click', e => { e.stopPropagation(); ep.classList.toggle('show'); });
-        document.addEventListener('click', e => { if (!ep.contains(e.target) && e.target !== document.getElementById('emojiBtn')) ep.classList.remove('show'); });
+        document.getElementById('emojiBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            ep.classList.toggle('show');
+        });
+        document.addEventListener('click', (e) => {
+            if (!ep.contains(e.target) && e.target !== document.getElementById('emojiBtn')) ep.classList.remove('show');
+        });
 
-        // ========== مرفقات (Supabase Storage) ==========
-        document.getElementById('attachBtn').addEventListener('click', () => document.getElementById('hiddenFileInput').click());
+        // ========== المرفقات ==========
+        document.getElementById('attachBtn').addEventListener('click', () => {
+            document.getElementById('hiddenFileInput').click();
+        });
         document.getElementById('hiddenFileInput').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            toast('⏳ جاري رفع الصورة...');
-            try {
-                const url = await SupabaseClient.uploadImage(file);
-                const msg = {
-                    id: genId(),
-                    chatId: chatId,
-                    senderId: currentUser.id,
-                    senderName: currentUser.name,
-                    text: '',
-                    mediaUrl: url,
-                    voiceUrl: null,
-                    voiceDuration: null,
-                    timestamp: new Date().toISOString(),
-                    status: 'sent'
-                };
-                await RamzDB.saveMessage(msg);
-                appendMessageToView(msg);
-                if (typeof RamzMedia !== 'undefined' && RamzMedia.autoSaveMedia) {
-                    RamzMedia.autoSaveMedia(url, currentUser.name);
-                }
-                if (socket && socket.connected) {
-                    socket.emit('message:send', { chatId, text: '', mediaUrl: url });
-                }
-                toast('✅ تم إرسال الصورة');
-            } catch (err) {
-                toast('❌ فشل رفع الصورة');
-            }
+            await uploadAndSendFile(file);
             e.target.value = '';
         });
-
-        // ========== عارض الصور ==========
-        function openImageViewer(src) {
-            document.getElementById('viewerImage').src = src;
-            document.getElementById('imageViewer').classList.add('active');
-        }
-        document.getElementById('closeImageViewer').addEventListener('click', () => document.getElementById('imageViewer').classList.remove('active'));
-
-        // ========== مشغل الصوت ==========
-        function playVoice(btn) {
-            const audioSrc = btn.dataset.audio;
-            if (!audioSrc) return;
-            const audio = new Audio(audioSrc);
-            const icon = btn.querySelector('i');
-            if (icon) { icon.className = 'fas fa-pause'; }
-            audio.play();
-            audio.onended = () => { if (icon) icon.className = 'fas fa-play'; };
-            btn.onclick = () => {
-                if (audio.paused) { audio.play(); if (icon) icon.className = 'fas fa-pause'; }
-                else { audio.pause(); if (icon) icon.className = 'fas fa-play'; }
-            };
-        }
 
         // ========== قائمة الصفحة ==========
         document.getElementById('chatMenuBtn').addEventListener('click', () => {
@@ -538,17 +565,38 @@
             if (e.target === this) this.classList.remove('active');
         });
 
-        // ========== أزرار الاتصال ==========
-        document.getElementById('voiceCallBtn').addEventListener('click', () => toast('📞 مكالمة صوتية'));
-        document.getElementById('videoCallBtn').addEventListener('click', () => toast('📹 مكالمة فيديو'));
+        // ========== أزرار الاتصال (تجريبي) ==========
+        document.getElementById('voiceCallBtn').addEventListener('click', () => toast('📞 مكالمة صوتية (قريباً)'));
+        document.getElementById('videoCallBtn').addEventListener('click', () => toast('📹 مكالمة فيديو (قريباً)'));
 
-        // ========== دوال مساعدة ==========
-        function toast(msg, dur=2000) { const t=document.getElementById('toast'); if(!t) return; t.textContent=msg; t.classList.add('show'); clearTimeout(t._tid); t._tid=setTimeout(()=>t.classList.remove('show'), dur); }
-        function esc(str) { return str ? str.replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' })[m]) : ''; }
-        function genId() { return 'id_'+Date.now()+'_'+Math.random().toString(36).substr(2,6); }
-        function fmtTime(d) { return new Date(d).toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'}); }
+        // ========== تهيئة المحادثة ==========
+        async function initChat() {
+            // استعادة المستخدم من localStorage (يبقى كما هو)
+            const saved = localStorage.getItem('ramz_user');
+            if (!saved) {
+                location.href = 'login.html';
+                return;
+            }
+            currentUser = JSON.parse(saved);
 
-        // بدء المحادثة
+            const params = new URLSearchParams(location.search);
+            chatId = params.get('chatId');
+            const chatName = params.get('name') || 'محادثة';
+            document.getElementById('chatNameDisp').textContent = chatName;
+            document.getElementById('chatAvatar').textContent = chatName.charAt(0);
+
+            const theme = await RamzDB.getSetting('theme');
+            if (theme === 'light') document.body.classList.add('light-theme');
+
+            await renderMessages();
+            await setupRealtime();
+
+            // ربط زر الإرسال
+            document.getElementById('sendMsgBtn').addEventListener('click', sendMessage);
+            msgInputElem.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+            updateSendBtn();
+        }
+
         initChat();
     </script>
 </body>
