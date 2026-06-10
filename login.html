@@ -193,7 +193,6 @@
         const SUPABASE_KEY = 'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx';
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // تعريف SupabaseClient على النطاق العام
         window.SupabaseClient = {
             signUp: async (phone, username) => {
                 const email = `${phone}@ramz.app`;
@@ -212,9 +211,7 @@
                 });
                 return data.user;
             },
-
             signUpWithEmail: async (email, password, username) => {
-                // محاولة تسجيل الدخول أولاً
                 const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
                 if (!signInError) {
                     await supabase.from('profiles').upsert({
@@ -225,7 +222,6 @@
                     });
                     return signInData.user;
                 }
-                // إذا فشل الدخول، حاول التسجيل
                 const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
@@ -239,38 +235,26 @@
                     avatar: username.charAt(0).toUpperCase()
                 });
                 return data.user;
-            },
-
-            searchByPhone: async (phone) => {
-                const { data, error } = await supabase.from('profiles').select('*').eq('phone', phone).single();
-                if (error && error.code !== 'PGRST116') throw error;
-                return data;
-            },
-
-            searchByEmail: async (email) => {
-                const { data, error } = await supabase.from('profiles').select('*').eq('email', email).single();
-                if (error && error.code !== 'PGRST116') throw error;
-                return data;
-            },
-
-            uploadImage: async (file) => {
-                const fileName = `${Date.now()}_${file.name}`;
-                const { data, error } = await supabase.storage.from('ramz-images').upload(fileName, file, {
-                    cacheControl: '3600',
-                    upsert: false
-                });
-                if (error) throw error;
-                const { data: publicUrlData } = supabase.storage.from('ramz-images').getPublicUrl(fileName);
-                return publicUrlData.publicUrl;
-            },
-
-            inviteBySMS: (phone) => {
-                const message = encodeURIComponent('انضم إلى RamzApp للتواصل معي: https://ramzapp.vercel.app');
-                window.open(`sms:${phone}?body=${message}`, '_blank');
             }
         };
 
-        // ========== أكواد الصفحة ==========
+        // ========== تحميل SQLite لحفظ المستخدم محلياً ==========
+        // سنستخدم localStorage مؤقتاً ثم chats.html سينقله إلى SQLite
+        // لكن الأفضل: نحفظ مباشرة في SQLite هنا - سنقوم بتحميل sqlite-local.js ديناميكياً
+        async function saveUserToLocalDB(user) {
+            try {
+                // تحميل sqlite-local.js إذا لم يكن محملاً
+                if (typeof RamzDB === 'undefined') {
+                    await import('/js/sqlite-local.js');
+                }
+                await RamzDB.saveUser(user);
+                await RamzDB.setSetting('theme', 'dark');
+                await RamzDB.setSetting('notifications', 'true');
+            } catch (e) {
+                console.warn('لم يتم الحفظ في SQLite، سيتم استخدام localStorage كاحتياط:', e);
+            }
+        }
+
         let currentMethod = 'phone';
 
         document.getElementById('phoneMethodBtn').addEventListener('click', () => {
@@ -312,9 +296,11 @@
 
             try {
                 let supabaseUser = null;
+                let phone = '';
+                let email = '';
 
                 if (currentMethod === 'phone') {
-                    const phone = document.getElementById('countryCode').value + document.getElementById('phoneInput').value.trim();
+                    phone = document.getElementById('countryCode').value + document.getElementById('phoneInput').value.trim();
                     if (!phone || phone.length < 8) {
                         toast('⚠️ أدخل رقم هاتف صحيح');
                         btn.disabled = false;
@@ -323,7 +309,7 @@
                     }
                     supabaseUser = await window.SupabaseClient.signUp(phone, name);
                 } else {
-                    const email = document.getElementById('emailInput').value.trim();
+                    email = document.getElementById('emailInput').value.trim();
                     const password = document.getElementById('passwordInput').value.trim();
                     if (!email) {
                         toast('⚠️ أدخل البريد الإلكتروني');
@@ -346,10 +332,15 @@
                     id: supabaseUser.id,
                     name: name,
                     avatar: name.charAt(0).toUpperCase(),
-                    phone: currentMethod === 'phone' ? (document.getElementById('countryCode').value + document.getElementById('phoneInput').value.trim()) : '',
-                    email: currentMethod === 'email' ? document.getElementById('emailInput').value.trim() : '',
+                    phone: phone,
+                    email: email,
                     isGuest: false
                 };
+
+                // حفظ في SQLite المحلية
+                await saveUserToLocalDB(sessionUser);
+
+                // حفظ في localStorage كنسخة احتياطية
                 localStorage.setItem('ramz_user', JSON.stringify(sessionUser));
 
                 toast('✅ تم التسجيل بنجاح');
@@ -365,7 +356,7 @@
             }
         });
 
-        document.getElementById('guestBtn').addEventListener('click', () => {
+        document.getElementById('guestBtn').addEventListener('click', async () => {
             const guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
             const guestName = 'زائر_' + guestId.slice(-4);
             const sessionUser = {
@@ -376,6 +367,9 @@
                 email: '',
                 isGuest: true
             };
+            // حفظ في SQLite
+            await saveUserToLocalDB(sessionUser);
+            // حفظ في localStorage
             localStorage.setItem('ramz_user', JSON.stringify(sessionUser));
             toast('👋 مرحباً بك كضيف');
             setTimeout(() => {
