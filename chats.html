@@ -12,20 +12,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0d0d0d;
-            --surface: #1a1a1a;
-            --surface2: #222;
-            --surface3: #2a2a2a;
-            --text: #fff;
-            --text2: #ddd;
-            --text3: #999;
-            --border: #2c2c2c;
-            --accent: #ff0050;
-            --green: #00a884;
-            --online: #00a884;
-            --unread: #ff0050;
-            --shadow: 0 8px 32px rgba(0,0,0,0.6);
-            --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+            --bg: #0d0d0d; --surface: #1a1a1a; --surface2: #222; --surface3: #2a2a2a;
+            --text: #fff; --text2: #ddd; --text3: #999; --border: #2c2c2c;
+            --accent: #ff0050; --green: #00a884; --online: #00a884; --unread: #ff0050;
+            --shadow: 0 8px 32px rgba(0,0,0,0.6); --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
         }
         .light-theme {
             --bg: #f0f2f5; --surface: #fff; --surface2: #f5f5f5; --surface3: #e9edef;
@@ -235,19 +225,17 @@
             </div>
         </div>
 
-        <!-- ========== شاشة الإعدادات (مطوّرة) ========== -->
+        <!-- ========== شاشة الإعدادات ========== -->
         <div class="screen no-nav" id="settingsScreen">
             <div class="app-header"><button class="header-btn" id="closeSettingsBtn"><i class="fas fa-arrow-right"></i></button><h2>⚙️ الإعدادات</h2></div>
             <div class="settings-list">
                 <div class="setting-item" id="themeToggle"><div class="setting-left"><div class="setting-icon"><i class="fas fa-moon"></i></div><span>الوضع الليلي</span></div><div class="toggle-sw active" id="themeSwitch"></div></div>
                 <div class="setting-item" id="notifToggle"><div class="setting-left"><div class="setting-icon"><i class="fas fa-bell"></i></div><span>الإشعارات</span></div><div class="toggle-sw active" id="notifSwitch"></div></div>
-                <div class="setting-item" id="syncContactsBtn"><div class="setting-left"><div class="setting-icon"><i class="fas fa-sync-alt"></i></div><span>تحديث جهات الاتصال</span></div><i class="fas fa-chevron-left"></i></div>
-                <div class="setting-item" id="inviteFriendBtn"><div class="setting-left"><div class="setting-icon"><i class="fas fa-user-plus"></i></div><span>دعوة صديق</span></div><i class="fas fa-chevron-left"></i></div>
                 <div class="setting-item" onclick="exportDB()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-download"></i></div><span>تصدير المحادثات</span></div><i class="fas fa-chevron-left"></i></div>
                 <div class="setting-item" onclick="importDB()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-upload"></i></div><span>استيراد النسخة الاحتياطية</span></div><i class="fas fa-chevron-left"></i></div>
                 <div class="setting-item" onclick="deleteAccount()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-trash-alt" style="color:#ff4444;"></i></div><span>إزالة الحساب</span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
                 <div class="setting-item" onclick="logout()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-sign-out-alt"></i></div><span>تسجيل الخروج</span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
-                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">RamzApp v2.0 – SQLite + Supabase + WebRTC</p>
+                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">RamzApp v2.0</p>
             </div>
         </div>
     </div>
@@ -255,16 +243,7 @@
     <!-- العناصر المشتركة -->
     <div class="toast" id="toast"></div>
     <div class="image-viewer" id="imageViewer"><button class="image-viewer-close" id="closeImageViewer">&times;</button><img src="" alt="صورة" id="viewerImage"></div>
-    <div class="call-screen-overlay" id="callScreen">
-        <div class="call-avatar-lg" id="callAvatar">👤</div>
-        <div class="call-status" id="callStatusText">جاري الاتصال...</div>
-        <div class="call-timer" id="callTimer">00:00</div>
-        <div class="call-actions-row">
-            <button class="call-action-btn call-mute" id="callMuteBtn"><i class="fas fa-microphone"></i></button>
-            <button class="call-action-btn call-end" id="callEndBtn"><i class="fas fa-phone-slash"></i></button>
-            <button class="call-action-btn call-speaker" id="callSpeakerBtn"><i class="fas fa-volume-up"></i></button>
-        </div>
-    </div>
+    <div class="call-screen-overlay" id="callScreen"><div class="call-avatar-lg" id="callAvatar">👤</div><div class="call-status" id="callStatusText">جاري الاتصال...</div><div class="call-timer" id="callTimer">00:00</div><div class="call-actions-row"><button class="call-action-btn call-mute" id="callMuteBtn"><i class="fas fa-microphone"></i></button><button class="call-action-btn call-end" id="callEndBtn"><i class="fas fa-phone-slash"></i></button><button class="call-action-btn call-speaker" id="callSpeakerBtn"><i class="fas fa-volume-up"></i></button></div></div>
     <div class="story-viewer" id="storyViewer"><button class="story-close" id="closeStoryViewer">&times;</button><div class="story-progress" id="storyProgress"></div><div class="story-content" id="storyContent"></div></div>
     <div class="popup-overlay" id="popupOverlay"><div class="popup-menu" id="popupMenu"></div></div>
 
@@ -277,38 +256,134 @@
         <button class="nav-item" data-nav="tools"><i class="fas fa-tools"></i><span>الأدوات</span></button>
     </div>
 
-    <script src="js/sqlite-local.js"></script>
-    <script src="js/supabase-client.js"></script>
-    <script src="js/webrtc-client.js"></script>
-    <script src="js/common.js"></script>
     <script>
-        // ========== استعادة الجلسة من SQLite ==========
-        let currentUser = null;
-        async function initApp() {
-            currentUser = await getSessionUser();
-            if (!currentUser) return;
+        // ========== 1. استعادة الجلسة من localStorage ==========
+        const savedUser = localStorage.getItem('ramz_user');
+        if (!savedUser) {
+            window.location.href = 'login.html';
+        }
+        let currentUser = JSON.parse(savedUser);
+        console.log('👤 المستخدم الحالي:', currentUser.name);
 
-            // تطبيق الثيم
-            const theme = await RamzDB.getSetting('theme');
-            if (theme === 'light') {
-                document.body.classList.add('light-theme');
-                document.getElementById('themeSwitch')?.classList.remove('active');
+        // محاولة نقل إلى SQLite في الخلفية
+        async function migrateToSQLite() {
+            try {
+                await import('/js/sqlite-local.js');
+                if (window.RamzDB && window.RamzDB.saveUser) {
+                    await window.RamzDB.saveUser({
+                        id: currentUser.id,
+                        name: currentUser.name,
+                        avatar: currentUser.avatar,
+                        phone: currentUser.phone || '',
+                        email: currentUser.email || '',
+                        supabaseId: currentUser.id,
+                        isGuest: !!currentUser.isGuest
+                    });
+                    console.log('✅ تم نقل المستخدم إلى SQLite');
+                }
+            } catch (e) {
+                console.log('ℹ️ SQLite غير متاح، استمرار مع localStorage');
             }
-            // عرض الدردشات
-            showScreen('chats');
-            // تحديث الإشعارات
-            const notif = await RamzDB.getSetting('notifications');
-            const notifSwitch = document.getElementById('notifSwitch');
-            if (notifSwitch) notifSwitch.classList.toggle('active', notif !== 'false');
+        }
+        migrateToSQLite();
+
+        // ========== 2. دوال مساعدة ==========
+        function toast(msg, dur=2000) {
+            const t = document.getElementById('toast'); if (!t) return;
+            t.textContent = msg; t.classList.add('show');
+            clearTimeout(t._tid); t._tid = setTimeout(() => t.classList.remove('show'), dur);
+        }
+        function esc(str) { return str ? str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[m]) : ''; }
+        function genId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2,6); }
+        function fmtTime(d) { return new Date(d).toLocaleTimeString('ar-SA', { hour:'2-digit', minute:'2-digit' }); }
+        function timeAgo(d) {
+            const diff = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+            if (diff < 60) return 'الآن';
+            if (diff < 3600) return Math.floor(diff / 60) + ' د';
+            if (diff < 86400) return Math.floor(diff / 3600) + ' س';
+            return Math.floor(diff / 86400) + ' يوم';
         }
 
-        // ========== التنقل ==========
+        // ========== 3. قاعدة البيانات (localStorage) ==========
+        const DB_KEY = 'ramzapp_v1_db';
+        let DB = {
+            chats: [], messages: {}, stories: [], channels: [], calls: [], catalog: [],
+            theme: 'dark', notifications: true
+        };
+
+        function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
+        function loadDB() {
+            const raw = localStorage.getItem(DB_KEY);
+            if (raw) try { DB = { ...DB, ...JSON.parse(raw) }; } catch (e) {}
+            if (!DB.chats.length) seedData();
+            if (!DB.catalog) DB.catalog = [];
+            applyTheme();
+        }
+
+        function seedData() {
+            const contacts = [
+                { id: 'c1', name: 'ترف مرسل', lastSeen: 'الآن', online: true, avatar: 'ت', unread: 2, pinned: true, bio: 'مسوقة إلكترونية' },
+                { id: 'c2', name: 'زينة مستقبل', lastSeen: 'آخر ظهور 10:30', online: false, avatar: 'ز', unread: 0, pinned: false, bio: 'مصممة جرافيك' },
+                { id: 'c3', name: 'شعلان مرسل', lastSeen: 'أمس', online: false, avatar: 'ش', unread: 5, pinned: true, bio: 'مطور برمجيات' },
+                { id: 'c4', name: 'رمزي مستقبل', lastSeen: 'الآن', online: true, avatar: 'ر', unread: 1, pinned: false, bio: 'محامي' },
+                { id: 'c5', name: 'نورة', lastSeen: '12:45', online: false, avatar: 'ن', unread: 0, pinned: false, bio: 'مصممة' },
+            ];
+            contacts.forEach(c => {
+                DB.chats.push({ ...c, lastMsg: '', lastTime: new Date().toISOString() });
+                DB.messages[c.id] = [];
+            });
+
+            const now = Date.now();
+            DB.messages['c1'] = [
+                { id: 'm1', sid: 'c1', text: 'مرحباً! كيف حالك؟', time: new Date(now - 7200000).toISOString(), likes: 1, liked: false, replyTo: null, img: null, status: 'read', voice: null },
+                { id: 'm2', sid: 'me', text: 'الحمد لله، بخير. وأنت؟', time: new Date(now - 3600000).toISOString(), likes: 0, liked: false, replyTo: null, img: null, status: 'read', voice: null },
+                { id: 'm3', sid: 'c1', text: 'تمام، شاهدت منشورك الجديد!', time: new Date(now - 1800000).toISOString(), likes: 2, liked: true, replyTo: null, img: null, status: 'delivered', voice: null },
+            ];
+            DB.chats[0].lastMsg = 'تمام، شاهدت منشورك الجديد!';
+            DB.chats[0].lastTime = new Date(now - 1800000).toISOString();
+
+            DB.messages['c3'] = [
+                { id: 'm4', sid: 'c3', text: 'هل أنهيت الكود الجديد؟', time: new Date(now - 14400000).toISOString(), likes: 0, liked: false, replyTo: null, img: null, status: 'read', voice: null },
+                { id: 'm5', sid: 'me', text: 'نعم، سأرسله لك قريباً', time: new Date(now - 10800000).toISOString(), likes: 1, liked: true, replyTo: null, img: null, status: 'read', voice: null },
+            ];
+            DB.chats[2].lastMsg = 'نعم، سأرسله لك قريباً';
+            DB.chats[2].lastTime = new Date(now - 10800000).toISOString();
+
+            DB.stories = [
+                { id: 's1', name: 'ترف', avatar: 'ت' },
+                { id: 's2', name: 'زينة', avatar: 'ز' },
+                { id: 's3', name: 'رمزي', avatar: 'ر' }
+            ];
+            DB.channels = [
+                { id: 'ch1', name: 'أخبار التقنية', avatar: '📰', followers: 1240, update: 'منذ ساعة' },
+                { id: 'ch2', name: 'رياضة اليوم', avatar: '⚽', followers: 892, update: 'منذ 3 ساعات' }
+            ];
+            DB.calls = [
+                { id: 'ca1', name: 'ترف', avatar: 'ت', time: 'اليوم 10:30', type: 'incoming' },
+                { id: 'ca2', name: 'زينة', avatar: 'ز', time: 'أمس 18:15', type: 'outgoing' }
+            ];
+            DB.catalog = [
+                { id: 'cat1', name: 'تصميم واجهات', price: '50 ر.س', icon: '🎨' },
+                { id: 'cat2', name: 'تطوير مواقع', price: '200 ر.س', icon: '💻' },
+                { id: 'cat3', name: 'استشارة تقنية', price: '100 ر.س', icon: '📋' },
+                { id: 'cat4', name: 'تدريب خاص', price: '150 ر.س', icon: '🎓' },
+            ];
+            saveDB();
+        }
+
+        function applyTheme() {
+            document.body.classList.toggle('light-theme', DB.theme === 'light');
+            const ts = document.getElementById('themeSwitch');
+            if (ts) ts.classList.toggle('active', DB.theme === 'dark');
+        }
+
+        // ========== 4. التنقل بين الشاشات ==========
         const screens = ['chatsScreen', 'contactsScreen', 'callsScreen', 'updatesScreen', 'toolsScreen', 'profileScreen', 'settingsScreen'];
         function showScreen(id) {
             screens.forEach(s => document.getElementById(s)?.classList.remove('active'));
-            document.getElementById(id + 'Screen')?.classList.add('active');
-            const noNav = ['profileScreen', 'settingsScreen'];
-            document.getElementById('bottomNav').style.display = noNav.includes(id + 'Screen') ? 'none' : 'flex';
+            const target = document.getElementById(id + 'Screen');
+            if (target) target.classList.add('active');
+            document.getElementById('bottomNav').style.display = ['profileScreen','settingsScreen'].includes(id+'Screen') ? 'none' : 'flex';
             document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
             if (id === 'chats') renderChats();
             if (id === 'contacts') renderContacts();
@@ -317,19 +392,11 @@
         }
         document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.nav)));
 
-        // ========== شاشة الدردشات ==========
-        async function renderChats(filter = '') {
+        // ========== 5. دوال الشاشات ==========
+        function renderChats(filter='') {
             const container = document.getElementById('chatsList');
-            // قراءة الرسائل من SQLite وتجميع المحادثات
-            // (تبسيط: نستخدم بيانات وهمية للعرض)
-            const chats = [
-                { id: 'c1', name: 'محمد الأحمدي', avatar: 'م', online: true, lastMsg: 'مرحباً! كيف حالك؟', lastTime: new Date().toISOString(), unread: 2, pinned: true },
-                { id: 'c2', name: 'سارة العمري', avatar: 'س', online: false, lastMsg: 'شكراً جزيلاً', lastTime: new Date(Date.now()-3600000).toISOString(), unread: 0, pinned: false },
-            ];
-            if (filter) {
-                const q = filter.toLowerCase();
-                chats = chats.filter(c => c.name.toLowerCase().includes(q));
-            }
+            let chats = [...DB.chats].sort((a,b)=>(b.pinned-a.pinned)||(new Date(b.lastTime)-new Date(a.lastTime)));
+            if (filter) chats = chats.filter(c => c.name.includes(filter));
             container.innerHTML = chats.length ? '' : '<div class="empty-state"><i class="fas fa-comments"></i><p>لا توجد محادثات</p></div>';
             chats.forEach(c => {
                 const div = document.createElement('div'); div.className = 'chat-item';
@@ -344,8 +411,8 @@
         document.getElementById('contactsBtn').addEventListener('click', () => showScreen('contacts'));
         document.getElementById('mainMenuBtn').addEventListener('click', () => {
             const items = [
-                { icon: 'fa-users', label: 'مجموعة جديدة', action: () => { const name = prompt('اسم المجموعة:'); if (name) { toast('✅ تم إنشاء المجموعة (محاكاة)'); } } },
-                { icon: 'fa-sign-out-alt', label: 'تسجيل الخروج', action: () => logout(), danger: true }
+                { icon: 'fa-users', label: 'مجموعة جديدة', action: () => { const name = prompt('اسم المجموعة:'); if (name) { const gid = 'g'+Date.now(); DB.chats.unshift({ id: gid, name, avatar: '👥', lastMsg: '', lastTime: new Date().toISOString(), online: true, unread: 0, pinned: false }); DB.messages[gid] = []; saveDB(); renderChats(); toast('✅ تم إنشاء المجموعة'); } } },
+                { icon: 'fa-sign-out-alt', label: 'تسجيل الخروج', action: () => { if (confirm('تسجيل الخروج؟')) { localStorage.removeItem('ramz_user'); location.href = 'login.html'; } }, danger: true }
             ];
             const menu = document.getElementById('popupMenu');
             menu.innerHTML = items.map(i => `<div class="popup-item${i.danger?' danger':''}"><i class="fas ${i.icon}"></i>${i.label}</div>`).join('');
@@ -354,40 +421,29 @@
         });
         document.getElementById('popupOverlay').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
 
-        // ========== شاشة جهات الاتصال ==========
-        async function renderContacts() {
+        function renderContacts() {
             const container = document.getElementById('contactsList');
-            // قراءة جهات الاتصال المحلية
-            const contacts = await RamzDB.getAllContacts();
-            // تحديث حالة التسجيل عبر Supabase (اختياري)
-            for (let c of contacts) {
-                if (c.phone && !c.supabaseId) {
-                    try {
-                        const spUser = await SupabaseClient.searchByPhone(c.phone);
-                        if (spUser) {
-                            await RamzDB.updateContactRegistration(c.phone, true, spUser.id);
-                            c.registered = true;
-                            c.supabaseId = spUser.id;
-                        }
-                    } catch(e) {}
-                }
-            }
-            const registered = contacts.filter(c => c.registered);
-            const unregistered = contacts.filter(c => !c.registered);
+            const contacts = [
+                { id: 'c1', name: 'ترف مرسل', phone: '+967123456789', registered: true },
+                { id: 'c2', name: 'زينة مستقبل', phone: '+967987654321', registered: true },
+                { id: 'c3', name: 'شعلان مرسل', phone: '+967555555555', registered: false },
+                { id: 'c4', name: 'رمزي مستقبل', phone: '+967111111111', registered: true },
+            ];
+            const reg = contacts.filter(c => c.registered), unreg = contacts.filter(c => !c.registered);
             container.innerHTML = `
                 <div class="section-header"><h3>✅ المسجلين في RamzApp</h3></div>
-                ${registered.length===0?'<p style="color:var(--text3);padding:8px 16px;">لا يوجد</p>':registered.map(c=>`<div class="channel-item" data-id="${c.supabaseId}" data-phone="${c.phone}"><div class="channel-avatar">${c.name?c.name.charAt(0):'📞'}</div><div class="item-info"><div class="item-title">${c.name||c.phone}</div><div class="item-sub">${c.phone} • مسجل</div></div><i class="fas fa-comment-dots" style="color:var(--accent);"></i></div>`).join('')}
+                ${reg.length===0?'<p style="color:var(--text3);padding:8px 16px;">لا يوجد</p>':reg.map(c=>`<div class="channel-item" data-id="${c.id}"><div class="channel-avatar">${c.name.charAt(0)}</div><div class="item-info"><div class="item-title">${c.name}</div><div class="item-sub">${c.phone} • مسجل</div></div><i class="fas fa-comment-dots" style="color:var(--accent);"></i></div>`).join('')}
                 <div class="section-header"><h3>⏳ غير المسجلين</h3></div>
-                ${unregistered.length===0?'<p style="color:var(--text3);padding:8px 16px;">لا يوجد</p>':unregistered.map(c=>`<div class="channel-item" data-phone="${c.phone}"><div class="channel-avatar">${c.name?c.name.charAt(0):'📞'}</div><div class="item-info"><div class="item-title">${c.name||c.phone}</div><div class="item-sub">${c.phone} • غير مسجل</div></div><button class="promo-btn invite-btn" style="padding:4px 10px;font-size:11px;">دعوة</button></div>`).join('')}
+                ${unreg.length===0?'<p style="color:var(--text3);padding:8px 16px;">لا يوجد</p>':unreg.map(c=>`<div class="channel-item"><div class="channel-avatar">${c.name.charAt(0)}</div><div class="item-info"><div class="item-title">${c.name}</div><div class="item-sub">${c.phone} • غير مسجل</div></div><button class="promo-btn invite-btn" style="padding:4px 10px;font-size:11px;">دعوة</button></div>`).join('')}
             `;
-            container.querySelectorAll('.fa-comment-dots').forEach(icon => icon.addEventListener('click', e => { e.stopPropagation(); const id = icon.closest('.channel-item').dataset.id; if (id) location.href = `chat.html?chatId=${id}&name=${encodeURIComponent(icon.closest('.channel-item').querySelector('.item-title').textContent)}`; }));
-            container.querySelectorAll('.invite-btn').forEach(btn => btn.addEventListener('click', e => { const phone = btn.closest('.channel-item').dataset.phone; SupabaseClient.inviteBySMS(phone); toast('📤 تم فتح الرسائل'); }));
+            container.querySelectorAll('.fa-comment-dots').forEach(icon => icon.addEventListener('click', e => { e.stopPropagation(); const id = icon.closest('.channel-item').dataset.id; const chat = DB.chats.find(c => c.id === id); if (chat) location.href = `chat.html?chatId=${chat.id}&name=${encodeURIComponent(chat.name)}`; }));
+            container.querySelectorAll('.invite-btn').forEach(btn => btn.addEventListener('click', () => toast('📤 تم فتح الرسائل للدعوة')));
         }
         document.getElementById('backFromContactsBtn').addEventListener('click', () => showScreen('chats'));
         document.getElementById('contactsMenuBtn').addEventListener('click', () => {
             const items = [
-                { icon: 'fa-user-plus', label: 'إضافة جهة اتصال', action: async () => { const phone = prompt('رقم الهاتف:'); if (phone) { const name = prompt('الاسم (اختياري):'); await RamzDB.addContact(phone, name||''); renderContacts(); toast('✅ تمت الإضافة'); } } },
-                { icon: 'fa-sync-alt', label: 'تحديث', action: async () => { await renderContacts(); toast('✅ تم التحديث'); } }
+                { icon: 'fa-user-plus', label: 'إضافة جهة اتصال', action: () => { const phone = prompt('رقم الهاتف:'); if (phone) { toast('✅ تمت الإضافة (محاكاة)'); } } },
+                { icon: 'fa-sync-alt', label: 'تحديث', action: () => { renderContacts(); toast('✅ تم التحديث'); } }
             ];
             const menu = document.getElementById('popupMenu');
             menu.innerHTML = items.map(i => `<div class="popup-item"><i class="fas ${i.icon}"></i>${i.label}</div>`).join('');
@@ -395,19 +451,24 @@
             menu.querySelectorAll('.popup-item').forEach((el, idx) => el.addEventListener('click', () => { items[idx].action(); document.getElementById('popupOverlay').classList.remove('active'); }));
         });
 
-        // ========== شاشة المكالمات ==========
         function renderCalls() {
-            document.getElementById('callsList').innerHTML = '<div class="empty-state"><i class="fas fa-phone-slash"></i><p>لا توجد مكالمات</p></div>';
+            document.getElementById('callsList').innerHTML = DB.calls.length ? DB.calls.map(c => `<div class="call-item"><div class="call-avatar">${c.avatar}</div><div class="item-info"><div class="item-title">${c.name}</div><div class="item-sub">${c.type==='incoming'?'📥 واردة':'📤 صادرة'} • ${c.time}</div></div><i class="fas fa-phone" style="color:var(--accent);"></i></div>`).join('') : '<div class="empty-state"><i class="fas fa-phone-slash"></i><p>لا توجد مكالمات</p></div>';
         }
 
-        // ========== شاشة التحديثات ==========
         function renderStories() {
-            document.getElementById('storyBar').innerHTML = `<div class="story-item story-add" onclick="toast('📷 الكاميرا قريباً')"><div class="story-ring"><span>+</span></div><div class="story-name">إضافة</div></div>`;
+            document.getElementById('storyBar').innerHTML = `<div class="story-item story-add" onclick="toast('📷 الكاميرا قريباً')"><div class="story-ring"><span>+</span></div><div class="story-name">إضافة</div></div>${DB.stories.map(s => `<div class="story-item" onclick="viewStory('${s.id}')"><div class="story-ring"><div class="story-avatar">${s.avatar}</div></div><div class="story-name">${esc(s.name)}</div></div>`).join('')}`;
         }
+        function viewStory(sid) {
+            const story = DB.stories.find(s => s.id === sid); if (!story) return;
+            document.getElementById('storyViewer').classList.add('active');
+            document.getElementById('storyContent').innerHTML = `<div style="text-align:center;"><div class="story-avatar-view">${story.avatar}</div><div class="story-text">📖 قصة ${esc(story.name)}</div></div>`;
+            setTimeout(() => document.getElementById('storyViewer').classList.remove('active'), 5000);
+        }
+        document.getElementById('closeStoryViewer').addEventListener('click', () => document.getElementById('storyViewer').classList.remove('active'));
         function renderChannels() {
-            document.getElementById('channelsList').innerHTML = '<div class="empty-state"><p>لا توجد قنوات</p></div>';
+            document.getElementById('channelsList').innerHTML = DB.channels.length ? DB.channels.map(ch => `<div class="channel-item"><div class="channel-avatar">${ch.avatar}</div><div class="item-info"><div class="item-title">${ch.name}</div><div class="item-sub">${ch.followers} متابع • ${ch.update}</div></div><i class="fas fa-chevron-left" style="color:var(--text3);"></i></div>`).join('') : '<div class="empty-state"><p>لا توجد قنوات</p></div>';
         }
-        document.getElementById('createChannelBtn').addEventListener('click', () => { const n = prompt('اسم القناة:'); if (n) { toast('✅ تم الإنشاء (محاكاة)'); } });
+        document.getElementById('createChannelBtn').addEventListener('click', () => { const n = prompt('اسم القناة:'); if (n) { DB.channels.push({ id: 'ch'+Date.now(), name: n, avatar: '📢', followers: 0, update: 'الآن' }); saveDB(); renderChannels(); toast('✅ تم الإنشاء'); } });
 
         // ========== شاشة الأدوات ==========
         document.getElementById('startAdBtn').addEventListener('click', () => toast('🚀 إعلان قريباً'));
@@ -416,53 +477,60 @@
 
         function showCatalog() {
             const screen = document.createElement('div'); screen.className = 'screen active no-nav'; screen.id = 'catalogTempScreen';
-            screen.innerHTML = `<div class="app-header"><button class="header-btn" id="closeCatalogBtn"><i class="fas fa-arrow-right"></i></button><h2>📦 الكتالوج</h2><button class="header-btn" id="addCatalogBtn"><i class="fas fa-plus"></i></button></div><div class="catalog-grid">${[
-                {icon:'🎨', name:'تصميم واجهات', price:'50 ر.س'},
-                {icon:'💻', name:'تطوير مواقع', price:'200 ر.س'}
-            ].map(c=>`<div class="catalog-card"><div class="catalog-img">${c.icon}</div><div class="catalog-info"><h5>${c.name}</h5><span>${c.price}</span></div></div>`).join('')}</div>`;
+            screen.innerHTML = `<div class="app-header"><button class="header-btn" id="closeCatalogBtn"><i class="fas fa-arrow-right"></i></button><h2>📦 الكتالوج</h2><button class="header-btn" id="addCatalogBtn"><i class="fas fa-plus"></i></button></div><div class="catalog-grid">${DB.catalog.length?DB.catalog.map(c=>`<div class="catalog-card"><div class="catalog-img">${c.icon}</div><div class="catalog-info"><h5>${esc(c.name)}</h5><span>${c.price}</span></div></div>`).join(''):'<div class="empty-state"><i class="fas fa-boxes"></i><p>الكتالوج فارغ</p></div>'}</div>`;
             document.getElementById('appContainer').appendChild(screen);
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); screen.classList.add('active');
             document.getElementById('bottomNav').style.display = 'none';
             screen.querySelector('#closeCatalogBtn').addEventListener('click', () => { screen.remove(); showScreen('tools'); });
-            screen.querySelector('#addCatalogBtn').addEventListener('click', () => { const name = prompt('اسم المنتج:'); if (name) { toast('✅ تمت الإضافة (محاكاة)'); } });
+            screen.querySelector('#addCatalogBtn').addEventListener('click', () => { const name = prompt('اسم المنتج:'); if (name) { const price = prompt('السعر:'); DB.catalog.push({ id: 'cat'+Date.now(), name, price: price || 'غير محدد', icon: '📦' }); saveDB(); screen.remove(); showCatalog(); toast('✅ تمت الإضافة'); } });
         }
 
         // ========== الإعدادات ==========
         document.getElementById('closeSettingsBtn').addEventListener('click', () => showScreen('chats'));
         document.getElementById('backFromProfileBtn').addEventListener('click', () => showScreen('chats'));
-        document.getElementById('themeToggle').addEventListener('click', async function(e) {
+        document.getElementById('themeToggle').addEventListener('click', function(e) {
             if (e.target.closest('.toggle-sw') || e.target === this || e.target.closest('.setting-left')) {
-                document.body.classList.toggle('light-theme');
-                const isLight = document.body.classList.contains('light-theme');
-                document.getElementById('themeSwitch').classList.toggle('active', !isLight);
-                await RamzDB.setSetting('theme', isLight ? 'light' : 'dark');
-                toast(isLight ? '☀️ الوضع النهاري' : '🌙 الوضع الليلي');
+                DB.theme = DB.theme === 'dark' ? 'light' : 'dark'; applyTheme(); saveDB();
+                toast(DB.theme === 'dark' ? '🌙 الوضع الليلي' : '☀️ الوضع النهاري');
             }
         });
-        document.getElementById('notifToggle').addEventListener('click', async function(e) {
+        document.getElementById('notifToggle').addEventListener('click', function(e) {
             if (e.target.closest('.toggle-sw') || e.target === this || e.target.closest('.setting-left')) {
-                const active = document.getElementById('notifSwitch').classList.toggle('active');
-                await RamzDB.setSetting('notifications', active ? 'true' : 'false');
-                toast(active ? '🔔 الإشعارات مفعلة' : '🔕 الإشعارات معطلة');
+                DB.notifications = !DB.notifications;
+                document.getElementById('notifSwitch').classList.toggle('active', DB.notifications);
+                saveDB(); toast(DB.notifications ? '🔔 الإشعارات مفعلة' : '🔕 الإشعارات معطلة');
             }
-        });
-        document.getElementById('syncContactsBtn').addEventListener('click', async () => { await renderContacts(); toast('🔄 تم تحديث جهات الاتصال'); });
-        document.getElementById('inviteFriendBtn').addEventListener('click', () => {
-            const phone = prompt('أدخل رقم الهاتف مع رمز الدولة:');
-            if (phone) { SupabaseClient.inviteBySMS(phone); toast('📤 تم نسخ رابط الدعوة'); }
         });
 
-        async function exportDB() { toast('💾 تصدير (يتم عبر SQLite لاحقاً)'); }
-        async function importDB() { toast('📥 استيراد (محاكاة)'); }
-        async function deleteAccount() {
-            if (confirm('⚠️ إزالة الحساب؟')) { await RamzDB.deleteUser(); window.location.href = 'login.html'; }
+        function exportDB() {
+            const blob = new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+            a.download = 'ramzapp_backup_' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+            toast('💾 تم التصدير');
         }
-        async function logout() {
-            await logoutUser();
+        function importDB() {
+            const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json';
+            inp.onchange = e => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = ev => { try { const data = JSON.parse(ev.target.result); if (data.chats && data.messages) { if (confirm('⚠️ استيراد النسخة سيستبدل جميع البيانات. متابعة؟')) { DB = { ...DB, ...data }; saveDB(); location.reload(); } } else toast('❌ ملف غير صالح'); } catch (err) { toast('❌ فشل في قراءة الملف'); } }; reader.readAsText(file); } };
+            inp.click();
+        }
+        function deleteAccount() {
+            if (confirm('⚠️ إزالة الحساب؟ سيتم حذف جميع البيانات المحلية.')) {
+                localStorage.removeItem(DB_KEY);
+                localStorage.removeItem('ramz_user');
+                location.href = 'login.html';
+            }
+        }
+        function logout() {
+            if (confirm('تسجيل الخروج؟')) {
+                localStorage.removeItem('ramz_user');
+                location.href = 'login.html';
+            }
         }
 
         // ========== بدء التطبيق ==========
-        initApp();
+        loadDB();
+        showScreen('chats');
+        document.getElementById('notifSwitch')?.classList.toggle('active', DB.notifications);
     </script>
 </body>
-                                                                                                                                                  </html>
+</html>
