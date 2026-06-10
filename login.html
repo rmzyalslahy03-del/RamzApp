@@ -134,7 +134,6 @@
         <div id="phoneFields">
             <div class="phone-row">
                 <select id="countryCode">
-                    <!-- الدول العربية أولاً -->
                     <option value="+967" selected>🇾🇪 +967 اليمن</option>
                     <option value="+966">🇸🇦 +966 السعودية</option>
                     <option value="+20">🇪🇬 +20 مصر</option>
@@ -158,7 +157,6 @@
                     <option value="+253">🇩🇯 +253 جيبوتي</option>
                     <option value="+269">🇰🇲 +269 جزر القمر</option>
 
-                    <!-- 10 دول أجنبية -->
                     <option value="+1">🇺🇸 +1 الولايات المتحدة</option>
                     <option value="+44">🇬🇧 +44 المملكة المتحدة</option>
                     <option value="+33">🇫🇷 +33 فرنسا</option>
@@ -187,11 +185,94 @@
     </div>
     <div class="toast" id="toast"></div>
 
-    <script src="js/supabase-client.js"></script>
-    <script>
+    <!-- تحميل Supabase من CDN مباشرة -->
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        const SUPABASE_URL = 'https://serlegwdzjulfcxabxzv.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // تعريف SupabaseClient على النطاق العام
+        window.SupabaseClient = {
+            signUp: async (phone, username) => {
+                const email = `${phone}@ramz.app`;
+                const password = `ramz-${phone}`;
+                const { data, error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { phone, username } }
+                });
+                if (error) throw error;
+                await supabase.from('profiles').upsert({
+                    id: data.user.id,
+                    phone,
+                    username,
+                    avatar: username.charAt(0).toUpperCase()
+                });
+                return data.user;
+            },
+
+            signUpWithEmail: async (email, password, username) => {
+                // محاولة تسجيل الدخول أولاً
+                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+                if (!signInError) {
+                    await supabase.from('profiles').upsert({
+                        id: signInData.user.id,
+                        email,
+                        username,
+                        avatar: username.charAt(0).toUpperCase()
+                    });
+                    return signInData.user;
+                }
+                // إذا فشل الدخول، حاول التسجيل
+                const { data, error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { username } }
+                });
+                if (error) throw error;
+                await supabase.from('profiles').upsert({
+                    id: data.user.id,
+                    email,
+                    username,
+                    avatar: username.charAt(0).toUpperCase()
+                });
+                return data.user;
+            },
+
+            searchByPhone: async (phone) => {
+                const { data, error } = await supabase.from('profiles').select('*').eq('phone', phone).single();
+                if (error && error.code !== 'PGRST116') throw error;
+                return data;
+            },
+
+            searchByEmail: async (email) => {
+                const { data, error } = await supabase.from('profiles').select('*').eq('email', email).single();
+                if (error && error.code !== 'PGRST116') throw error;
+                return data;
+            },
+
+            uploadImage: async (file) => {
+                const fileName = `${Date.now()}_${file.name}`;
+                const { data, error } = await supabase.storage.from('ramz-images').upload(fileName, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+                if (error) throw error;
+                const { data: publicUrlData } = supabase.storage.from('ramz-images').getPublicUrl(fileName);
+                return publicUrlData.publicUrl;
+            },
+
+            inviteBySMS: (phone) => {
+                const message = encodeURIComponent('انضم إلى RamzApp للتواصل معي: https://ramzapp.vercel.app');
+                window.open(`sms:${phone}?body=${message}`, '_blank');
+            }
+        };
+
+        // ========== أكواد الصفحة ==========
         let currentMethod = 'phone';
 
-        // ========== تبديل طريقة الدخول ==========
         document.getElementById('phoneMethodBtn').addEventListener('click', () => {
             currentMethod = 'phone';
             document.getElementById('phoneMethodBtn').classList.add('active');
@@ -216,7 +297,6 @@
             t._tid = setTimeout(() => t.classList.remove('show'), dur);
         }
 
-        // ========== تسجيل الدخول ==========
         document.getElementById('loginBtn').addEventListener('click', async () => {
             const btn = document.getElementById('loginBtn');
             btn.disabled = true;
@@ -241,11 +321,10 @@
                         btn.textContent = '🚀 تسجيل الدخول';
                         return;
                     }
-                    supabaseUser = await SupabaseClient.signUp(phone, name);
+                    supabaseUser = await window.SupabaseClient.signUp(phone, name);
                 } else {
                     const email = document.getElementById('emailInput').value.trim();
                     const password = document.getElementById('passwordInput').value.trim();
-                    
                     if (!email) {
                         toast('⚠️ أدخل البريد الإلكتروني');
                         btn.disabled = false;
@@ -258,7 +337,7 @@
                         btn.textContent = '🚀 تسجيل الدخول';
                         return;
                     }
-                    supabaseUser = await SupabaseClient.signUpWithEmail(email, password, name);
+                    supabaseUser = await window.SupabaseClient.signUpWithEmail(email, password, name);
                 }
 
                 console.log('✅ تم التسجيل في Supabase:', supabaseUser.id);
@@ -286,11 +365,9 @@
             }
         });
 
-        // ========== الدخول كضيف ==========
         document.getElementById('guestBtn').addEventListener('click', () => {
             const guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
             const guestName = 'زائر_' + guestId.slice(-4);
-
             const sessionUser = {
                 id: guestId,
                 name: guestName,
