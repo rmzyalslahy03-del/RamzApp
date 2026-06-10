@@ -1,5 +1,7 @@
-// common.js – RamzApp (الإصدار النهائي – مع احتياطي localStorage)
-// رابط الخادم: https://ramzapp.onrender.com
+// ================================================================
+// common.js – RamzApp (الإصدار النهائي المُصحَّح)
+// يضمن عدم الخروج المفاجئ إلى صفحة التسجيل
+// ================================================================
 
 // ---------- نظام الأيقونات الاحتياطي ----------
 let fontAwesomeLoaded = false;
@@ -89,25 +91,26 @@ function toast(msg, duration = 2000) {
     t._tid = setTimeout(() => t.classList.remove('show'), duration);
 }
 
-// ---------- دوال الجلسة (SQLite أولاً، ثم localStorage) ----------
+// ==================== إصلاح مشكلة الجلسة ====================
+// أولاً: نحاول SQLite، وإذا فشل نعتمد على localStorage الذي حفظه login.html
 async function getSessionUser() {
-    // 1. نحاول من SQLite (إذا كان RamzDB معرّفاً)
+    // 1. محاولة القراءة من SQLite (إن كان RamzDB موجوداً)
     if (typeof RamzDB !== 'undefined' && RamzDB.getUser) {
         try {
             const user = await RamzDB.getUser();
             if (user && user.id) return user;
         } catch (e) {
-            console.warn('⚠️ فشلت قراءة المستخدم من SQLite، سنحاول localStorage');
+            console.warn('⚠️ تعذر الوصول إلى SQLite، سيتم استخدام localStorage');
         }
     }
 
-    // 2. إذا لم نجد، نقرأ من localStorage (الذي حفظه login.html)
+    // 2. إذا لم نجد، نقرأ من localStorage (المصدر الذي كتبه login.html)
     const saved = localStorage.getItem('ramz_user');
     if (saved) {
         try {
             const user = JSON.parse(saved);
             if (user && user.name) {
-                // نحاول حفظه في SQLite الآن (للمرات القادمة)
+                // نحاول الآن نقل هذه البيانات إلى SQLite للمرات القادمة
                 if (typeof RamzDB !== 'undefined' && RamzDB.saveUser) {
                     try {
                         await RamzDB.saveUser({
@@ -117,13 +120,13 @@ async function getSessionUser() {
                             phone: user.phone || '',
                             email: user.email || '',
                             supabaseId: user.id,
-                            isGuest: user.isGuest || false
+                            isGuest: !!user.isGuest
                         });
                         await RamzDB.setSetting('theme', 'dark');
                         await RamzDB.setSetting('notifications', 'true');
                         console.log('✅ تم نقل المستخدم من localStorage إلى SQLite');
                     } catch (e) {
-                        console.warn('⚠️ لم يتم نقل المستخدم إلى SQLite:', e);
+                        console.warn('⚠️ تعذر نقل المستخدم إلى SQLite:', e);
                     }
                 }
                 return user;
@@ -131,7 +134,7 @@ async function getSessionUser() {
         } catch (e) {}
     }
 
-    // 3. لا مستخدم في أي مكان → العودة إلى login
+    // 3. لا مستخدم في أي مكان – العودة إلى صفحة التسجيل
     window.location.href = 'login.html';
     return null;
 }
@@ -146,10 +149,10 @@ async function logoutUser() {
     window.location.href = 'login.html';
 }
 
-// ========== إعدادات الخادم (للتشغيل المباشر مع Render) ==========
+// ========== إعدادات الخادم ==========
 window.RAMZ_SERVER_URL = 'https://ramzapp.onrender.com';
 
-// ---------- تصدير الدوال للاستخدام العام ----------
+// ---------- تصدير الدوال ----------
 window.timeAgo = timeAgo;
 window.fmtTime = fmtTime;
 window.fmtDate = fmtDate;
@@ -162,7 +165,7 @@ window.onFontAwesomeLoad = onFontAwesomeLoad;
 window.loadFallbackCDN = loadFallbackCDN;
 window.detectFontAwesome = detectFontAwesome;
 
-// ---------- تشغيل كشف الأيقونات تلقائياً ----------
+// ---------- تشغيل تلقائي ----------
 document.addEventListener('DOMContentLoaded', detectFontAwesome);
 window.addEventListener('load', () => {
     setTimeout(() => {
