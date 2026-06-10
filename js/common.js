@@ -1,6 +1,6 @@
 // ================================================================
-// common.js – RamzApp (الإصدار النهائي المُصحَّح)
-// يضمن عدم الخروج المفاجئ إلى صفحة التسجيل
+// common.js – RamzApp (النسخة النهائية)
+// يحتوي على دوال مساعدة مشتركة وإدارة الجلسة وإصلاحات الأيقونات
 // ================================================================
 
 // ---------- نظام الأيقونات الاحتياطي ----------
@@ -74,7 +74,8 @@ function fmtDate(date) {
 
 // ---------- دوال النص ----------
 function esc(str) {
-    return str ? str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[m]) : '';
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[m]);
 }
 
 function genId() {
@@ -91,10 +92,12 @@ function toast(msg, duration = 2000) {
     t._tid = setTimeout(() => t.classList.remove('show'), duration);
 }
 
-// ==================== إصلاح مشكلة الجلسة ====================
-// أولاً: نحاول SQLite، وإذا فشل نعتمد على localStorage الذي حفظه login.html
+// ==================== إدارة الجلسة (تعتمد على localStorage) ====================
+// هذه الدوال تظل كما هي لأن المصادقة الأساسية ما زالت باستخدام localStorage
+// ولم نغيرها لاستخدام Supabase Auth في النسخة الحالية
+
 async function getSessionUser() {
-    // 1. محاولة القراءة من SQLite (إن كان RamzDB موجوداً)
+    // محاولة القراءة من SQLite أولاً (إذا كان RamzDB متاحاً)
     if (typeof RamzDB !== 'undefined' && RamzDB.getUser) {
         try {
             const user = await RamzDB.getUser();
@@ -104,13 +107,13 @@ async function getSessionUser() {
         }
     }
 
-    // 2. إذا لم نجد، نقرأ من localStorage (المصدر الذي كتبه login.html)
+    // القراءة من localStorage (المصدر الأساسي)
     const saved = localStorage.getItem('ramz_user');
     if (saved) {
         try {
             const user = JSON.parse(saved);
             if (user && user.name) {
-                // نحاول الآن نقل هذه البيانات إلى SQLite للمرات القادمة
+                // نقل المستخدم إلى SQLite إذا كان متاحاً (للتكامل المستقبلي)
                 if (typeof RamzDB !== 'undefined' && RamzDB.saveUser) {
                     try {
                         await RamzDB.saveUser({
@@ -131,28 +134,35 @@ async function getSessionUser() {
                 }
                 return user;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error('خطأ في قراءة localStorage', e);
+        }
     }
 
-    // 3. لا مستخدم في أي مكان – العودة إلى صفحة التسجيل
+    // لا يوجد مستخدم – العودة إلى صفحة التسجيل
     window.location.href = 'login.html';
     return null;
 }
 
-async function logoutUser() {
+function logoutUser() {
     try {
         if (typeof RamzDB !== 'undefined' && RamzDB.deleteUser) {
-            await RamzDB.deleteUser();
+            RamzDB.deleteUser().catch(console.warn);
         }
     } catch (e) {}
     localStorage.removeItem('ramz_user');
     window.location.href = 'login.html';
 }
 
-// ========== إعدادات الخادم ==========
-window.RAMZ_SERVER_URL = 'https://ramzapp.onrender.com';
+// ========== إعدادات الخادم (لم نعد نستخدمها، لكن نحتفظ بها للتوافق) ==========
+window.RAMZ_SERVER_URL = 'https://ramzapp.onrender.com'; // لم يعد مستخدماً
 
-// ---------- تصدير الدوال ----------
+// ---------- الكشف عن دعم File System Access API ----------
+function isFileSystemAccessSupported() {
+    return 'showDirectoryPicker' in window;
+}
+
+// ---------- تصدير الدوال العامة ----------
 window.timeAgo = timeAgo;
 window.fmtTime = fmtTime;
 window.fmtDate = fmtDate;
@@ -164,8 +174,9 @@ window.logoutUser = logoutUser;
 window.onFontAwesomeLoad = onFontAwesomeLoad;
 window.loadFallbackCDN = loadFallbackCDN;
 window.detectFontAwesome = detectFontAwesome;
+window.isFileSystemAccessSupported = isFileSystemAccessSupported;
 
-// ---------- تشغيل تلقائي ----------
+// ---------- تشغيل تلقائي للتحقق من FontAwesome ----------
 document.addEventListener('DOMContentLoaded', detectFontAwesome);
 window.addEventListener('load', () => {
     setTimeout(() => {
