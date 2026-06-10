@@ -7,14 +7,25 @@ let SQL = null;
 let db = null;
 const DB_FILENAME = '/ramz-messages.db';
 
-// ========== تحميل SQL.js من CDN ==========
+// ========== تحميل SQL.js من CDN بديل (jsdelivr) ==========
 async function loadSqlJs() {
     if (SQL) return SQL;
-    const module = await import('https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js');
-    SQL = await module.default({
-        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-    });
-    return SQL;
+    try {
+        // استخدام jsdelivr بدلاً من cdnjs لأنه يعمل بشكل أفضل مع ملفات wasm
+        const module = await import('https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js');
+        SQL = await module.default({
+            locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/${file}`
+        });
+        return SQL;
+    } catch (err) {
+        console.error('❌ فشل تحميل sql.js:', err);
+        // محاولة تحميل من النسخة الاحتياطية (unpkg)
+        const module = await import('https://unpkg.com/sql.js@1.8.0/dist/sql-wasm.js');
+        SQL = await module.default({
+            locateFile: file => `https://unpkg.com/sql.js@1.8.0/dist/${file}`
+        });
+        return SQL;
+    }
 }
 
 // ========== فتح/إنشاء قاعدة البيانات في OPFS ==========
@@ -282,7 +293,6 @@ async function deleteSetting(key) {
 // دوال إضافية (إدارة شاملة)
 // ================================================================
 
-// حذف جميع البيانات (لإزالة الحساب)
 async function deleteAllData() {
     await openDatabase();
     db.run('DELETE FROM messages');
@@ -291,7 +301,6 @@ async function deleteAllData() {
     db.run('DELETE FROM user');
 }
 
-// تصدير قاعدة البيانات كملف .sqlite
 async function exportDatabase() {
     await openDatabase();
     const data = db.export();
@@ -304,11 +313,9 @@ async function exportDatabase() {
     URL.revokeObjectURL(url);
 }
 
-// استيراد قاعدة البيانات من ملف .sqlite
 async function importDatabase(file) {
     const buffer = await file.arrayBuffer();
     db = new SQL.Database(new Uint8Array(buffer));
-    // حفظ في OPFS
     try {
         const root = await navigator.storage.getDirectory();
         const fileHandle = await root.getFileHandle(DB_FILENAME, { create: true });
@@ -325,30 +332,21 @@ async function importDatabase(file) {
 // تصدير الدوال للاستخدام العام
 // ================================================================
 window.RamzDB = {
-    // إدارة قاعدة البيانات
     openDatabase,
     exportDatabase,
     importDatabase,
     deleteAllData,
-
-    // المستخدم
     saveUser,
     getUser,
     deleteUser,
-
-    // الرسائل
     saveMessage,
     getMessages,
     deleteMessages,
     getAllChats,
-
-    // جهات الاتصال
     addContact,
     updateContactRegistration,
     getAllContacts,
     deleteContact,
-
-    // الإعدادات
     getSetting,
     setSetting,
     deleteSetting
