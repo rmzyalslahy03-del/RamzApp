@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>⚡ RamzApp | تسجيل الدخول</title>
+    <title>⚡ RamzApp | الدخول</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -28,14 +28,15 @@
             text-align: center;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
             width: 360px;
             background: var(--surface2);
             padding: 30px 20px;
             border-radius: 20px;
             border: 1px solid var(--border);
+            position: relative;
         }
-        .login-box h2 { font-size: 2rem; }
+        .login-box h2 { font-size: 2rem; margin-bottom: 5px; }
         .login-input {
             padding: 15px;
             border-radius: 30px;
@@ -51,22 +52,6 @@
             border-color: var(--accent);
             box-shadow: 0 0 0 4px rgba(255,0,80,0.1);
         }
-        .phone-row {
-            display: flex;
-            gap: 8px;
-        }
-        .phone-row select {
-            padding: 15px 10px;
-            border-radius: 30px;
-            border: 2px solid var(--border);
-            background: #0d0d0d;
-            color: var(--text);
-            font-family: inherit;
-            font-size: 16px;
-            outline: none;
-            width: 110px;
-        }
-        .phone-row input { flex: 1; }
         .btn {
             padding: 15px;
             border-radius: 30px;
@@ -78,10 +63,15 @@
             font-weight: 700;
             cursor: pointer;
             transition: 0.2s;
+            margin-top: 5px;
         }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(255,0,80,0.4); }
         .btn:disabled { opacity: 0.5; pointer-events: none; }
-        .guest-btn { background: transparent; border: 2px solid var(--accent); color: var(--accent); }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--accent);
+            color: var(--accent);
+        }
         .toast {
             position: fixed;
             bottom: 40px;
@@ -96,96 +86,57 @@
             transition: 0.3s;
         }
         .toast.show { opacity: 1; }
-        .method-toggle {
+        .hidden { display: none !important; }
+        .guest-row {
             display: flex;
             gap: 8px;
             justify-content: center;
+            margin-top: 5px;
         }
-        .method-btn {
-            padding: 8px 16px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            background: transparent;
-            color: var(--text3);
+        .link {
+            color: var(--accent);
             cursor: pointer;
-            font-family: inherit;
-            font-size: 13px;
-            transition: 0.2s;
+            font-size: 14px;
+            text-decoration: none;
         }
-        .method-btn.active {
-            background: var(--accent);
-            color: #fff;
-            border-color: var(--accent);
-        }
+        .link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="login-box">
         <h2>⚡ RamzApp</h2>
-        <p style="color:var(--text3); font-size:14px;">اختر طريقة الدخول</p>
 
-        <!-- أزرار التبديل -->
-        <div class="method-toggle">
-            <button class="method-btn active" id="phoneMethodBtn">📱 رقم الهاتف</button>
-            <button class="method-btn" id="emailMethodBtn">📧 البريد الإلكتروني</button>
-        </div>
-
-        <!-- حقول الهاتف -->
-        <div id="phoneFields">
-            <div class="phone-row">
-                <select id="countryCode">
-                    <option value="+967" selected>🇾🇪 +967 اليمن</option>
-                    <option value="+966">🇸🇦 +966 السعودية</option>
-                    <option value="+20">🇪🇬 +20 مصر</option>
-                    <option value="+971">🇦🇪 +971 الإمارات</option>
-                    <option value="+965">🇰🇼 +965 الكويت</option>
-                    <option value="+974">🇶🇦 +974 قطر</option>
-                    <option value="+973">🇧🇭 +973 البحرين</option>
-                    <option value="+968">🇴🇲 +968 عُمان</option>
-                    <option value="+962">🇯🇴 +962 الأردن</option>
-                    <option value="+961">🇱🇧 +961 لبنان</option>
-                    <option value="+970">🇵🇸 +970 فلسطين</option>
-                    <option value="+963">🇸🇾 +963 سوريا</option>
-                    <option value="+964">🇮🇶 +964 العراق</option>
-                    <option value="+213">🇩🇿 +213 الجزائر</option>
-                    <option value="+216">🇹🇳 +216 تونس</option>
-                    <option value="+218">🇱🇾 +218 ليبيا</option>
-                    <option value="+212">🇲🇦 +212 المغرب</option>
-                    <option value="+222">🇲🇷 +222 موريتانيا</option>
-                    <option value="+249">🇸🇩 +249 السودان</option>
-                    <option value="+252">🇸🇴 +252 الصومال</option>
-                    <option value="+253">🇩🇯 +253 جيبوتي</option>
-                    <option value="+269">🇰🇲 +269 جزر القمر</option>
-
-                    <option value="+1">🇺🇸 +1 الولايات المتحدة</option>
-                    <option value="+44">🇬🇧 +44 المملكة المتحدة</option>
-                    <option value="+33">🇫🇷 +33 فرنسا</option>
-                    <option value="+49">🇩🇪 +49 ألمانيا</option>
-                    <option value="+39">🇮🇹 +39 إيطاليا</option>
-                    <option value="+7">🇷🇺 +7 روسيا</option>
-                    <option value="+86">🇨🇳 +86 الصين</option>
-                    <option value="+81">🇯🇵 +81 اليابان</option>
-                    <option value="+91">🇮🇳 +91 الهند</option>
-                    <option value="+90">🇹🇷 +90 تركيا</option>
-                </select>
-                <input type="tel" class="login-input" id="phoneInput" placeholder="رقم الهاتف" autocomplete="off">
+        <!-- شاشة الاختيار الأولى -->
+        <div id="startScreen">
+            <p style="color:var(--text3); margin-bottom:10px;">تطبيق المراسلة الآمن</p>
+            <button class="btn" id="showLoginBtn">🔑 تسجيل الدخول</button>
+            <button class="btn btn-outline" id="showSignupBtn">🆕 إنشاء حساب جديد</button>
+            <div class="guest-row">
+                <button class="btn btn-outline" id="guestBtn" style="width:100%;">👤 الدخول كضيف</button>
             </div>
         </div>
 
-        <!-- حقول البريد الإلكتروني (مخفية افتراضياً) -->
-        <div id="emailFields" style="display:none;">
-            <input type="email" class="login-input" id="emailInput" placeholder="البريد الإلكتروني" autocomplete="off">
-            <input type="password" class="login-input" id="passwordInput" placeholder="كلمة المرور" autocomplete="off" style="margin-top:8px;">
+        <!-- نموذج تسجيل الدخول -->
+        <div id="loginScreen" class="hidden">
+            <p style="color:var(--text3);">تسجيل الدخول بحسابك</p>
+            <input type="email" class="login-input" id="loginEmail" placeholder="البريد الإلكتروني" autocomplete="email">
+            <input type="password" class="login-input" id="loginPassword" placeholder="كلمة المرور" autocomplete="current-password">
+            <button class="btn" id="loginSubmitBtn">🚀 دخول</button>
+            <span class="link" id="switchToSignup">ليس لديك حساب؟ إنشاء حساب جديد</span>
         </div>
 
-        <input type="text" class="login-input" id="nameInput" placeholder="اسم المستخدم" autocomplete="off">
-
-        <button class="btn" id="loginBtn">🚀 تسجيل الدخول</button>
-        <button class="btn guest-btn" id="guestBtn">👤 الدخول كضيف</button>
+        <!-- نموذج إنشاء حساب جديد -->
+        <div id="signupScreen" class="hidden">
+            <p style="color:var(--text3);">إنشاء حساب جديد</p>
+            <input type="email" class="login-input" id="signupEmail" placeholder="البريد الإلكتروني" autocomplete="email">
+            <input type="password" class="login-input" id="signupPassword" placeholder="كلمة المرور (6 أحرف على الأقل)" autocomplete="new-password">
+            <input type="text" class="login-input" id="signupName" placeholder="اسم المستخدم" autocomplete="off">
+            <button class="btn" id="signupSubmitBtn">🚀 إنشاء حساب</button>
+            <span class="link" id="switchToLogin">لديك حساب بالفعل؟ تسجيل الدخول</span>
+        </div>
     </div>
     <div class="toast" id="toast"></div>
 
-    <!-- تحميل Supabase من CDN مباشرة -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
@@ -193,102 +144,7 @@
         const SUPABASE_KEY = 'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx';
         const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // تعريف SupabaseClient على النطاق العام
-        window.SupabaseClient = {
-            signUp: async (phone, username) => {
-                const email = `${phone}@ramz.app`;
-                const password = `ramz-${phone}`;
-                const { data, error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: { data: { phone, username } }
-                });
-                if (error) throw error;
-                await supabase.from('profiles').upsert({
-                    id: data.user.id,
-                    phone,
-                    username,
-                    avatar: username.charAt(0).toUpperCase()
-                });
-                return data.user;
-            },
-
-            signUpWithEmail: async (email, password, username) => {
-                // محاولة تسجيل الدخول أولاً
-                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-                if (!signInError) {
-                    await supabase.from('profiles').upsert({
-                        id: signInData.user.id,
-                        email,
-                        username,
-                        avatar: username.charAt(0).toUpperCase()
-                    });
-                    return signInData.user;
-                }
-                // إذا فشل الدخول، حاول التسجيل
-                const { data, error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: { data: { username } }
-                });
-                if (error) throw error;
-                await supabase.from('profiles').upsert({
-                    id: data.user.id,
-                    email,
-                    username,
-                    avatar: username.charAt(0).toUpperCase()
-                });
-                return data.user;
-            },
-
-            searchByPhone: async (phone) => {
-                const { data, error } = await supabase.from('profiles').select('*').eq('phone', phone).single();
-                if (error && error.code !== 'PGRST116') throw error;
-                return data;
-            },
-
-            searchByEmail: async (email) => {
-                const { data, error } = await supabase.from('profiles').select('*').eq('email', email).single();
-                if (error && error.code !== 'PGRST116') throw error;
-                return data;
-            },
-
-            uploadImage: async (file) => {
-                const fileName = `${Date.now()}_${file.name}`;
-                const { data, error } = await supabase.storage.from('ramz-images').upload(fileName, file, {
-                    cacheControl: '3600',
-                    upsert: false
-                });
-                if (error) throw error;
-                const { data: publicUrlData } = supabase.storage.from('ramz-images').getPublicUrl(fileName);
-                return publicUrlData.publicUrl;
-            },
-
-            inviteBySMS: (phone) => {
-                const message = encodeURIComponent('انضم إلى RamzApp للتواصل معي: https://ramzapp.vercel.app');
-                window.open(`sms:${phone}?body=${message}`, '_blank');
-            }
-        };
-
-        // ========== أكواد الصفحة ==========
-        let currentMethod = 'phone';
-
-        document.getElementById('phoneMethodBtn').addEventListener('click', () => {
-            currentMethod = 'phone';
-            document.getElementById('phoneMethodBtn').classList.add('active');
-            document.getElementById('emailMethodBtn').classList.remove('active');
-            document.getElementById('phoneFields').style.display = 'block';
-            document.getElementById('emailFields').style.display = 'none';
-        });
-
-        document.getElementById('emailMethodBtn').addEventListener('click', () => {
-            currentMethod = 'email';
-            document.getElementById('emailMethodBtn').classList.add('active');
-            document.getElementById('phoneMethodBtn').classList.remove('active');
-            document.getElementById('phoneFields').style.display = 'none';
-            document.getElementById('emailFields').style.display = 'block';
-        });
-
+        // ========== دوال المساعدة ==========
         function toast(msg, dur = 2000) {
             const t = document.getElementById('toast');
             t.textContent = msg;
@@ -297,74 +153,135 @@
             t._tid = setTimeout(() => t.classList.remove('show'), dur);
         }
 
-        document.getElementById('loginBtn').addEventListener('click', async () => {
-            const btn = document.getElementById('loginBtn');
-            btn.disabled = true;
-            btn.textContent = '⏳ جاري التسجيل...';
+        function saveAndGo(user) {
+            localStorage.setItem('ramz_user', JSON.stringify(user));
+            window.location.href = 'chats.html';
+        }
 
-            const name = document.getElementById('nameInput').value.trim();
-            if (!name) {
-                toast('⚠️ أدخل اسم المستخدم');
+        // ========== عناصر الواجهة ==========
+        const startScreen = document.getElementById('startScreen');
+        const loginScreen = document.getElementById('loginScreen');
+        const signupScreen = document.getElementById('signupScreen');
+
+        // أزرار الانتقال بين الشاشات
+        document.getElementById('showLoginBtn').addEventListener('click', () => {
+            startScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+        });
+        document.getElementById('showSignupBtn').addEventListener('click', () => {
+            startScreen.classList.add('hidden');
+            signupScreen.classList.remove('hidden');
+        });
+        document.getElementById('switchToSignup').addEventListener('click', () => {
+            loginScreen.classList.add('hidden');
+            signupScreen.classList.remove('hidden');
+        });
+        document.getElementById('switchToLogin').addEventListener('click', () => {
+            signupScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+        });
+
+        // ========== تسجيل الدخول ==========
+        document.getElementById('loginSubmitBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('loginSubmitBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ جاري الدخول...';
+
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            if (!email || !password) {
+                toast('⚠️ جميع الحقول مطلوبة');
                 btn.disabled = false;
-                btn.textContent = '🚀 تسجيل الدخول';
+                btn.textContent = '🚀 دخول';
                 return;
             }
 
             try {
-                let supabaseUser = null;
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
 
-                if (currentMethod === 'phone') {
-                    const phone = document.getElementById('countryCode').value + document.getElementById('phoneInput').value.trim();
-                    if (!phone || phone.length < 8) {
-                        toast('⚠️ أدخل رقم هاتف صحيح');
-                        btn.disabled = false;
-                        btn.textContent = '🚀 تسجيل الدخول';
-                        return;
-                    }
-                    supabaseUser = await window.SupabaseClient.signUp(phone, name);
-                } else {
-                    const email = document.getElementById('emailInput').value.trim();
-                    const password = document.getElementById('passwordInput').value.trim();
-                    if (!email) {
-                        toast('⚠️ أدخل البريد الإلكتروني');
-                        btn.disabled = false;
-                        btn.textContent = '🚀 تسجيل الدخول';
-                        return;
-                    }
-                    if (!password) {
-                        toast('⚠️ أدخل كلمة المرور');
-                        btn.disabled = false;
-                        btn.textContent = '🚀 تسجيل الدخول';
-                        return;
-                    }
-                    supabaseUser = await window.SupabaseClient.signUpWithEmail(email, password, name);
-                }
-
-                console.log('✅ تم التسجيل في Supabase:', supabaseUser.id);
+                // جلب الاسم من جدول profiles إن وجد
+                let username = email.split('@')[0];
+                const { data: profile } = await supabase.from('profiles').select('username').eq('id', data.user.id).single();
+                if (profile && profile.username) username = profile.username;
 
                 const sessionUser = {
-                    id: supabaseUser.id,
-                    name: name,
-                    avatar: name.charAt(0).toUpperCase(),
-                    phone: currentMethod === 'phone' ? (document.getElementById('countryCode').value + document.getElementById('phoneInput').value.trim()) : '',
-                    email: currentMethod === 'email' ? document.getElementById('emailInput').value.trim() : '',
+                    id: data.user.id,
+                    name: username,
+                    avatar: username.charAt(0).toUpperCase(),
+                    email: email,
+                    phone: '',
                     isGuest: false
                 };
-                localStorage.setItem('ramz_user', JSON.stringify(sessionUser));
-
-                toast('✅ تم التسجيل بنجاح');
-                setTimeout(() => {
-                    window.location.href = 'chats.html';
-                }, 500);
-
+                saveAndGo(sessionUser);
+                toast('✅ تم تسجيل الدخول');
             } catch (error) {
-                console.error('فشل التسجيل:', error);
-                toast('❌ فشل التسجيل: ' + (error.message || 'خطأ غير معروف'));
+                console.error('فشل الدخول:', error);
+                toast('❌ ' + (error.message || 'بيانات الدخول غير صحيحة'));
                 btn.disabled = false;
-                btn.textContent = '🚀 تسجيل الدخول';
+                btn.textContent = '🚀 دخول';
             }
         });
 
+        // ========== إنشاء حساب جديد ==========
+        document.getElementById('signupSubmitBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('signupSubmitBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ جاري إنشاء الحساب...';
+
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value.trim();
+            const name = document.getElementById('signupName').value.trim();
+
+            if (!email || !password || !name) {
+                toast('⚠️ جميع الحقول مطلوبة');
+                btn.disabled = false;
+                btn.textContent = '🚀 إنشاء حساب';
+                return;
+            }
+            if (password.length < 6) {
+                toast('⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+                btn.disabled = false;
+                btn.textContent = '🚀 إنشاء حساب';
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { username: name } }
+                });
+                if (error) throw error;
+
+                // حفظ في جدول profiles
+                await supabase.from('profiles').upsert({
+                    id: data.user.id,
+                    email,
+                    username: name,
+                    avatar: name.charAt(0).toUpperCase()
+                });
+
+                const sessionUser = {
+                    id: data.user.id,
+                    name: name,
+                    avatar: name.charAt(0).toUpperCase(),
+                    email: email,
+                    phone: '',
+                    isGuest: false
+                };
+                saveAndGo(sessionUser);
+                toast('✅ تم إنشاء الحساب بنجاح');
+            } catch (error) {
+                console.error('فشل إنشاء الحساب:', error);
+                toast('❌ ' + (error.message || 'حدث خطأ'));
+                btn.disabled = false;
+                btn.textContent = '🚀 إنشاء حساب';
+            }
+        });
+
+        // ========== الدخول كضيف ==========
         document.getElementById('guestBtn').addEventListener('click', () => {
             const guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
             const guestName = 'زائر_' + guestId.slice(-4);
@@ -372,19 +289,12 @@
                 id: guestId,
                 name: guestName,
                 avatar: '👤',
-                phone: '',
                 email: '',
+                phone: '',
                 isGuest: true
             };
-            localStorage.setItem('ramz_user', JSON.stringify(sessionUser));
+            saveAndGo(sessionUser);
             toast('👋 مرحباً بك كضيف');
-            setTimeout(() => {
-                window.location.href = 'chats.html';
-            }, 300);
-        });
-
-        document.getElementById('nameInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') document.getElementById('loginBtn').click();
         });
     </script>
 </body>
