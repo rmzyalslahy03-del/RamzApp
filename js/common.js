@@ -1,7 +1,8 @@
-// ============================================================
-// common.js – RamzApp (SQLite + أيقونات + دوال مساعدة)
-// لا يستخدم localStorage إطلاقاً. يعتمد على RamzDB.
-// ============================================================
+// ================================================================
+// common.js – RamzApp (الإصدار النهائي للنشر)
+// الوظائف: أيقونات، وقت، إشعارات، جلسة SQLite، دوال مساعدة
+// رابط الخادم: https://ramzapp.onrender.com
+// ================================================================
 
 // ---------- نظام الأيقونات الاحتياطي ----------
 let fontAwesomeLoaded = false;
@@ -18,12 +19,11 @@ function loadFallbackCDN() {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css';
-    link.onload = function () {
+    link.onload = function() {
         fontAwesomeLoaded = true;
         document.body.classList.remove('no-fontawesome');
     };
-    link.onerror = function () {
-        // في حالة فشل البديل أيضاً، نترك الأيقونات الاحتياطية (Unicode) تعمل
+    link.onerror = function() {
         document.body.classList.add('no-fontawesome');
     };
     document.head.appendChild(link);
@@ -48,7 +48,6 @@ function detectFontAwesome() {
         }
     }, 1500);
 
-    // فحص إضافي متأخر
     setTimeout(() => {
         if (!fontAwesomeLoaded && !fallbackCDNTried) {
             loadFallbackCDN();
@@ -121,6 +120,9 @@ async function logoutUser() {
     } catch (e) {}
     window.location.href = 'login.html';
 }
+
+// ========== إعدادات الخادم (للتشغيل المباشر مع Render) ==========
+window.RAMZ_SERVER_URL = 'https://ramzapp.onrender.com';
 
 // ---------- تصدير الدوال للاستخدام العام ----------
 window.timeAgo = timeAgo;
