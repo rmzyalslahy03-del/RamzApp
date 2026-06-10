@@ -1,8 +1,5 @@
-// ================================================================
-// common.js – RamzApp (الإصدار النهائي للنشر)
-// الوظائف: أيقونات، وقت، إشعارات، جلسة SQLite، دوال مساعدة
+// common.js – RamzApp (الإصدار النهائي – مع احتياطي localStorage)
 // رابط الخادم: https://ramzapp.onrender.com
-// ================================================================
 
 // ---------- نظام الأيقونات الاحتياطي ----------
 let fontAwesomeLoaded = false;
@@ -47,7 +44,6 @@ function detectFontAwesome() {
             }
         }
     }, 1500);
-
     setTimeout(() => {
         if (!fontAwesomeLoaded && !fallbackCDNTried) {
             loadFallbackCDN();
@@ -93,31 +89,60 @@ function toast(msg, duration = 2000) {
     t._tid = setTimeout(() => t.classList.remove('show'), duration);
 }
 
-// ---------- دوال الجلسة (تعتمد على SQLite المحلية) ----------
+// ---------- دوال الجلسة (SQLite أولاً، ثم localStorage) ----------
 async function getSessionUser() {
-    try {
-        if (typeof RamzDB === 'undefined') {
-            console.error('RamzDB غير معرف. تأكد من تحميل sqlite-local.js قبل common.js');
-            window.location.href = 'login.html';
-            return null;
+    // 1. نحاول من SQLite (إذا كان RamzDB معرّفاً)
+    if (typeof RamzDB !== 'undefined' && RamzDB.getUser) {
+        try {
+            const user = await RamzDB.getUser();
+            if (user && user.id) return user;
+        } catch (e) {
+            console.warn('⚠️ فشلت قراءة المستخدم من SQLite، سنحاول localStorage');
         }
-        const user = await RamzDB.getUser();
-        if (!user) {
-            window.location.href = 'login.html';
-            return null;
-        }
-        return user;
-    } catch (e) {
-        console.error('فشل في قراءة المستخدم من SQLite:', e);
-        window.location.href = 'login.html';
-        return null;
     }
+
+    // 2. إذا لم نجد، نقرأ من localStorage (الذي حفظه login.html)
+    const saved = localStorage.getItem('ramz_user');
+    if (saved) {
+        try {
+            const user = JSON.parse(saved);
+            if (user && user.name) {
+                // نحاول حفظه في SQLite الآن (للمرات القادمة)
+                if (typeof RamzDB !== 'undefined' && RamzDB.saveUser) {
+                    try {
+                        await RamzDB.saveUser({
+                            id: user.id,
+                            name: user.name,
+                            avatar: user.avatar || user.name.charAt(0).toUpperCase(),
+                            phone: user.phone || '',
+                            email: user.email || '',
+                            supabaseId: user.id,
+                            isGuest: user.isGuest || false
+                        });
+                        await RamzDB.setSetting('theme', 'dark');
+                        await RamzDB.setSetting('notifications', 'true');
+                        console.log('✅ تم نقل المستخدم من localStorage إلى SQLite');
+                    } catch (e) {
+                        console.warn('⚠️ لم يتم نقل المستخدم إلى SQLite:', e);
+                    }
+                }
+                return user;
+            }
+        } catch (e) {}
+    }
+
+    // 3. لا مستخدم في أي مكان → العودة إلى login
+    window.location.href = 'login.html';
+    return null;
 }
 
 async function logoutUser() {
     try {
-        await RamzDB.deleteUser();
+        if (typeof RamzDB !== 'undefined' && RamzDB.deleteUser) {
+            await RamzDB.deleteUser();
+        }
     } catch (e) {}
+    localStorage.removeItem('ramz_user');
     window.location.href = 'login.html';
 }
 
