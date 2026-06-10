@@ -1,149 +1,100 @@
-// supabase-client.js – عميل Supabase لـ RamzApp (الإصدار النهائي)
-// يدعم: التسجيل بالهاتف، البريد الإلكتروني، البحث، رفع الصور، الدعوة
+// supabase-client.js – الإصدار النهائي (متوافق مع جميع الصفحات، لا يحتاج type="module")
+(function() {
+    // التأكد من تحميل مكتبة Supabase الأساسية قبل هذا الملف
+    if (typeof supabase === 'undefined') {
+        console.error('❌ خطأ: مكتبة Supabase لم تُحمّل قبل supabase-client.js');
+        return;
+    }
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const SUPABASE_URL = 'https://serlegwdzjulfcxabxzv.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const BUCKET_NAME = 'ramz-images';
 
-const SUPABASE_URL = 'https://serlegwdzjulfcxabxzv.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx';
-const BUCKET_NAME = 'ramz-images';
+    // ========== دوال مساعدة داخلية ==========
+    async function ensureProfile(userId, email, username) {
+        const { error } = await supabaseClient
+            .from('profiles')
+            .upsert({ id: userId, email, username, avatar: username.charAt(0).toUpperCase() });
+        if (error) console.warn('⚠️ تحديث الملف الشخصي فشل:', error);
+    }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    // ========== واجهة العميل العامة ==========
+    window.SupabaseClient = {
+        // ----- المصادقة بالهاتف (بريد إلكتروني وهمي) -----
+        async signUp(phone, username) {
+            const email = `${phone}@ramz.app`;
+            const password = `ramz-${phone}`;
+            const { data, error } = await supabaseClient.auth.signUp({
+                email,
+                password,
+                options: { data: { phone, username } }
+            });
+            if (error) throw error;
+            await ensureProfile(data.user.id, email, username);
+            return data.user;
+        },
 
-// ========== المصادقة (Auth) ==========
+        async signIn(phone) {
+            const email = `${phone}@ramz.app`;
+            const password = `ramz-${phone}`;
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            return data.user;
+        },
 
-async function signUp(phone, username) {
-  const email = `${phone}@ramz.app`;
-  const password = `ramz-${phone}`;
+        // ----- المصادقة بالبريد الإلكتروني وكلمة مرور عادية -----
+        async signUpWithEmail(email, password, username) {
+            // محاولة تسجيل الدخول أولاً (في حال كان الحساب موجوداً)
+            const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (!signInError) {
+                await ensureProfile(signInData.user.id, email, username);
+                return signInData.user;
+            }
+            // التسجيل الجديد
+            const { data, error } = await supabaseClient.auth.signUp({
+                email,
+                password,
+                options: { data: { username } }
+            });
+            if (error) throw error;
+            await ensureProfile(data.user.id, email, username);
+            return data.user;
+        },
 
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { phone, username } }
-  });
+        // ----- البحث عن مستخدم -----
+        async searchByPhone(phone) {
+            const email = `${phone}@ramz.app`;
+            return this.searchByEmail(email);
+        },
 
-  if (error) throw error;
+        async searchByEmail(email) {
+            const { data, error } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('email', email)
+                .single();
+            if (error && error.code !== 'PGRST116') throw error;
+            return data;
+        },
 
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .upsert({
-      id: data.user.id,
-      phone,
-      username,
-      avatar: username.charAt(0).toUpperCase()
-    });
+        // ----- رفع صورة إلى Storage -----
+        async uploadImage(file) {
+            const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            const { data, error } = await supabaseClient.storage
+                .from(BUCKET_NAME)
+                .upload(fileName, file, { cacheControl: '3600', upsert: false });
+            if (error) throw error;
+            const { data: publicUrlData } = supabaseClient.storage.from(BUCKET_NAME).getPublicUrl(fileName);
+            return publicUrlData.publicUrl;
+        },
 
-  if (profileError) console.warn('تعذر حفظ الملف الشخصي:', profileError);
+        // ----- دعوة عبر SMS -----
+        inviteBySMS(phone) {
+            const message = encodeURIComponent('انضم إلي على RamzApp: https://ramzapp.vercel.app');
+            window.open(`sms:${phone}?body=${message}`, '_blank');
+        }
+    };
 
-  return data.user;
-}
-
-async function signIn(phone) {
-  const email = `${phone}@ramz.app`;
-  const password = `ramz-${phone}`;
-
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  return data.user;
-}
-
-async function signUpWithEmail(email, password, username) {
-  // محاولة تسجيل الدخول أولاً
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-  if (!signInError) {
-    // تحديث الملف الشخصي
-    await supabase.from('profiles').upsert({
-      id: signInData.user.id,
-      email,
-      username,
-      avatar: username.charAt(0).toUpperCase()
-    });
-    return signInData.user;
-  }
-
-  // إذا فشل الدخول، حاول التسجيل
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { username } }
-  });
-
-  if (error) throw error;
-
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .upsert({
-      id: data.user.id,
-      email,
-      username,
-      avatar: username.charAt(0).toUpperCase()
-    });
-
-  if (profileError) console.warn('تعذر حفظ الملف الشخصي:', profileError);
-
-  return data.user;
-}
-
-// ========== الملف الشخصي (Profiles) ==========
-
-async function searchByPhone(phone) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('phone', phone)
-    .single();
-
-  if (error && error.code !== 'PGRST116') throw error;
-  return data;
-}
-
-async function searchByEmail(email) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('email', email)
-    .single();
-
-  if (error && error.code !== 'PGRST116') throw error;
-  return data;
-}
-
-// ========== التخزين (Storage) ==========
-
-async function uploadImage(file) {
-  const fileName = `${Date.now()}_${file.name}`;
-
-  const { data, error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false
-    });
-
-  if (error) throw error;
-
-  const { data: publicUrlData } = supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(fileName);
-
-  return publicUrlData.publicUrl;
-}
-
-// ========== دعوة (Invite) ==========
-
-function inviteBySMS(phone) {
-  const message = encodeURIComponent('انضم إلى RamzApp للتواصل معي: https://ramzapp.vercel.app');
-  const smsLink = `sms:${phone}?body=${message}`;
-  window.open(smsLink, '_blank');
-}
-
-// ========== تصدير ==========
-
-window.SupabaseClient = {
-  signUp,
-  signIn,
-  signUpWithEmail,
-  searchByPhone,
-  searchByEmail,
-  uploadImage,
-  inviteBySMS
-};
+    console.log('✅ SupabaseClient جاهز للاستخدام');
+})();
