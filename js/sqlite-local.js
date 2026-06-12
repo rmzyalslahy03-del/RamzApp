@@ -1,6 +1,7 @@
 // ================================================================
 // sqlite-local.js – قاعدة بيانات محلية متقدمة (SQLite مع OPFS أو IndexedDB)
 // RamzApp – تخزين دائم موحد لجميع البيانات (بدون localStorage)
+// مع إضافة محتوى تجريبي (seed data) للاختبار
 // ================================================================
 
 let SQL = null;
@@ -276,6 +277,121 @@ async function getAllIDBDataByType(type) {
     });
 }
 
+// ========== المحتوى التجريبي (Seed Data) ==========
+// دالة لإضافة بيانات تجريبية للتطبيق (تُستدعى مرة واحدة فقط)
+async function seedTestData() {
+    try {
+        // التحقق مما إذا كان قد تم إضافة البيانات التجريبية مسبقاً
+        const seeded = await getSetting('seed_data_added');
+        if (seeded === 'true') {
+            console.log('✅ البيانات التجريبية موجودة مسبقاً');
+            return;
+        }
+
+        console.log('🌱 جاري إضافة البيانات التجريبية...');
+        
+        // 1. إضافة مستخدم تجريبي إذا لم يوجد مستخدم حالي
+        const existingUser = await getUser();
+        if (!existingUser) {
+            await saveUser({
+                id: 'test_user_1',
+                name: 'أحمد الدوسري',
+                avatar: 'أ',
+                phone: '0550000001',
+                email: 'ahmed@example.com',
+                supabaseId: '',
+                isGuest: false
+            });
+            console.log('✅ تم إضافة المستخدم التجريبي (أحمد)');
+        }
+
+        // 2. إضافة مستخدم آخر للمحادثات (جهة اتصال مسجلة)
+        const contacts = await getAllContacts();
+        if (contacts.length === 0) {
+            await addContact('0550000002', 'سارة المنصور', true, '');
+            await addContact('0550000003', 'محمد العتيبي', true, '');
+            await addContact('0550000004', 'نورة القحطاني', false, '');
+            console.log('✅ تم إضافة 3 جهات اتصال تجريبية');
+        }
+
+        // 3. إضافة رسائل تجريبية في محادثة "room1" إذا كانت فارغة
+        const messages = await getMessages('room1');
+        if (messages.length === 0) {
+            const now = new Date();
+            const testMessages = [
+                {
+                    id: 'seed_msg_1',
+                    chatId: 'room1',
+                    senderId: 'test_user_1',
+                    senderName: 'أحمد الدوسري',
+                    text: 'مرحباً! هذا تطبيق RamzApp 👋',
+                    mediaUrl: '',
+                    voiceUrl: '',
+                    voiceDuration: '',
+                    replyTo: '',
+                    timestamp: new Date(now.getTime() - 86400000).toISOString(), // أمس
+                    status: 'read'
+                },
+                {
+                    id: 'seed_msg_2',
+                    chatId: 'room1',
+                    senderId: 'test_user_1',
+                    senderName: 'أحمد الدوسري',
+                    text: 'يمكنك إرسال رسائل نصية، صور، وتسجيلات صوتية 🎙️',
+                    mediaUrl: '',
+                    voiceUrl: '',
+                    voiceDuration: '',
+                    replyTo: '',
+                    timestamp: new Date(now.getTime() - 43200000).toISOString(), // قبل 12 ساعة
+                    status: 'read'
+                },
+                {
+                    id: 'seed_msg_3',
+                    chatId: 'room1',
+                    senderId: 'guest_123',
+                    senderName: 'زائر_123',
+                    text: 'التطبيق رائع! هل يدعم المكالمات؟',
+                    mediaUrl: '',
+                    voiceUrl: '',
+                    voiceDuration: '',
+                    replyTo: '',
+                    timestamp: new Date(now.getTime() - 7200000).toISOString(), // قبل ساعتين
+                    status: 'delivered'
+                },
+                {
+                    id: 'seed_msg_4',
+                    chatId: 'room1',
+                    senderId: 'test_user_1',
+                    senderName: 'أحمد الدوسري',
+                    text: 'شكراً! المكالمات الصوتية والمرئية قريباً 📞',
+                    mediaUrl: '',
+                    voiceUrl: '',
+                    voiceDuration: '',
+                    replyTo: '',
+                    timestamp: new Date(now.getTime() - 3600000).toISOString(), // قبل ساعة
+                    status: 'sent'
+                }
+            ];
+            for (const msg of testMessages) {
+                await saveMessage(msg);
+            }
+            console.log('✅ تم إضافة 4 رسائل تجريبية في محادثة "room1"');
+        }
+
+        // 4. إضافة إعدادات افتراضية
+        const theme = await getSetting('theme');
+        if (!theme) await setSetting('theme', 'dark');
+        const notifications = await getSetting('notifications');
+        if (!notifications) await setSetting('notifications', 'true');
+
+        // تسجيل أن البيانات التجريبية قد أضيفت
+        await setSetting('seed_data_added', 'true');
+        console.log('✅ اكتملت إضافة البيانات التجريبية بنجاح');
+    } catch (err) {
+        console.warn('⚠️ فشل إضافة البيانات التجريبية:', err);
+    }
+}
+
 // ========== الواجهة الموحدة ==========
 async function openDatabase() {
     // التحقق من OPFS أولاً
@@ -286,6 +402,8 @@ async function openDatabase() {
             if (success) {
                 usingIndexedDB = false;
                 console.log('✅ باستخدام SQLite على OPFS');
+                // إضافة البيانات التجريبية بعد فتح قاعدة البيانات
+                await seedTestData();
                 return;
             }
         } catch (err) {
@@ -296,6 +414,8 @@ async function openDatabase() {
     usingIndexedDB = true;
     await initIndexedDB();
     console.log('✅ باستخدام IndexedDB (بديل آمن)');
+    // إضافة البيانات التجريبية بعد فتح قاعدة البيانات
+    await seedTestData();
 }
 
 // ========== دوال المستخدم ==========
@@ -526,6 +646,8 @@ async function deleteAllData() {
         await deleteIDBData('contacts');
         await deleteIDBData('settings');
     }
+    // إعادة تعيين علامة seed_data_added حتى يتم إعادة إنشاء البيانات التجريبية لاحقاً
+    await setSetting('seed_data_added', 'false');
 }
 
 async function exportDatabase() {
@@ -583,6 +705,8 @@ async function importDatabase(file) {
             }
         }
     }
+    // إعادة تعيين علامة seed_data_added لتجنب تكرار البيانات
+    await setSetting('seed_data_added', 'false');
 }
 
 // ========== تصدير الواجهة العامة ==========
@@ -607,4 +731,4 @@ window.RamzDB = {
     deleteSetting
 };
 
-console.log('✅ RamzDB جاهز (SQLite/IndexedDB)');
+console.log('✅ RamzDB جاهز (SQLite/IndexedDB) مع دعم البيانات التجريبية');
