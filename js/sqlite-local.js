@@ -1,17 +1,32 @@
 // ================================================================
-// sqlite-local.js – قاعدة بيانات محلية مع دعم SQLite (SQL.js) و IndexedDB كبديل
-// RamzApp – تخزين دائم مع fallback تلقائي
+// sqlite-local.js – قاعدة بيانات محلية متقدمة (SQLite مع OPFS أو IndexedDB)
+// RamzApp – تخزين دائم موحد لجميع البيانات (بدون localStorage)
 // ================================================================
 
 let SQL = null;
 let db = null;
 let usingIndexedDB = false;
 let indexedDBReady = false;
+let opfsAvailable = false;
+
 const DB_FILENAME = '/ramz-messages.db';
 const IDB_NAME = 'RamzAppDB';
 const IDB_STORE = 'ramz_data';
 
-// ========== تحميل SQL.js من عدة CDNs بشكل تسلسلي ==========
+// ========== التحقق من دعم OPFS ==========
+async function checkOPFSSupport() {
+    try {
+        const root = await navigator.storage.getDirectory();
+        opfsAvailable = true;
+        return true;
+    } catch (e) {
+        console.warn('⚠️ OPFS غير مدعوم، سيتم استخدام IndexedDB');
+        opfsAvailable = false;
+        return false;
+    }
+}
+
+// ========== تحميل SQL.js مع fallback متعدد ==========
 async function loadSqlJsWithRetry() {
     const cdnList = [
         {
@@ -47,8 +62,8 @@ async function loadSqlJsWithRetry() {
     throw new Error('تعذر تحميل sql.js من جميع CDNs');
 }
 
-// ========== فتح قاعدة بيانات SQLite (إذا أمكن) ==========
-async function initSQLite() {
+// ========== فتح SQLite على OPFS ==========
+async function initSQLiteOnOPFS() {
     if (!SQL) {
         SQL = await loadSqlJsWithRetry();
     }
@@ -58,10 +73,8 @@ async function initSQLite() {
         const root = await navigator.storage.getDirectory();
         fileHandle = await root.getFileHandle(DB_FILENAME, { create: true });
     } catch (e) {
-        console.warn('⚠️ OPFS غير متاح، استخدام الذاكرة فقط');
-        db = new SQL.Database();
-        initTablesSQLite();
-        return true;
+        console.warn('⚠️ OPFS غير متاح، التحول إلى IndexedDB');
+        return false;
     }
 
     const file = await fileHandle.getFile();
@@ -77,7 +90,19 @@ async function initSQLite() {
     const originalRun = db.run.bind(db);
     db.run = function (sql, params) {
         const result = originalRun(sql, params);
-        saveSQLiteToOPFS(fileHandle);
+        saveSQLiteToOPFS(fileHandle).catch(console.warn);
+        return result;
+    };
+    const originalExec = db.exec.bind(db);
+    db.exec = function (sql, params) {
+        const result = originalExec(sql, params);
+        if (sql.trim().toUpperCase().startsWith('INSERT') ||
+            sql.trim().toUpperCase().startsWith('UPDATE') ||
+            sql.trim().toUpperCase().startsWith('DELETE') ||
+            sql.trim().toUpperCase().startsWith('CREATE') ||
+            sql.trim().toUpperCase().startsWith('DROP')) {
+            saveSQLiteToOPFS(fileHandle).catch(console.warn);
+        }
         return result;
     };
 
@@ -86,7 +111,7 @@ async function initSQLite() {
 }
 
 async function saveSQLiteToOPFS(fileHandle) {
-    if (!fileHandle) return;
+    if (!fileHandle || !db) return;
     try {
         const data = db.export();
         const writable = await fileHandle.createWritable();
@@ -98,16 +123,19 @@ async function saveSQLiteToOPFS(fileHandle) {
 }
 
 function initTablesSQLite() {
+    // جدول المستخدم الحالي
     db.run(`
         CREATE TABLE IF NOT EXISTS user (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             avatar TEXT DEFAULT '',
             phone TEXT DEFAULT '',
+            email TEXT DEFAULT '',
             supabaseId TEXT DEFAULT '',
             isGuest INTEGER DEFAULT 0
         )
     `);
+    // جدول الرسائل
     db.run(`
         CREATE TABLE IF NOT EXISTS messages (
             id TEXT PRIMARY KEY,
@@ -123,6 +151,7 @@ function initTablesSQLite() {
             status TEXT DEFAULT 'sent'
         )
     `);
+    // جدول جهات الاتصال
     db.run(`
         CREATE TABLE IF NOT EXISTS contacts (
             phone TEXT PRIMARY KEY,
@@ -131,30 +160,39 @@ function initTablesSQLite() {
             supabaseId TEXT DEFAULT ''
         )
     `);
+    // جدول الإعدادات
     db.run(`
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT DEFAULT ''
         )
     `);
+    // فهارس
     db.run('CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chatId, timestamp)');
     db.run('CREATE INDEX IF NOT EXISTS idx_contacts_registered ON contacts(registered)');
 }
 
-// ========== البديل: IndexedDB (عند فشل SQLite) ==========
+// ========== IndexedDB (البديل) ==========
 async function initIndexedDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(IDB_NAME, 1);
+        const request = indexedDB.open(IDB_NAME, 2);
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {
             indexedDBReady = true;
             resolve(request.result);
         };
         request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(IDB_STORE)) {
-                const store = db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+            const idb = event.target.result;
+            if (!idb.objectStoreNames.contains(IDB_STORE)) {
+                const store = idb.createObjectStore(IDB_STORE, { keyPath: 'key' });
                 store.createIndex('type', 'type', { unique: false });
+            }
+            // تحديث الإصدار 2: إضافة فهارس إضافية
+            if (event.oldVersion < 2) {
+                const store = event.target.transaction.objectStore(IDB_STORE);
+                if (!store.indexNames.contains('type_key')) {
+                    store.createIndex('type_key', ['type', 'key']);
+                }
             }
         };
     });
@@ -163,15 +201,15 @@ async function initIndexedDB() {
 async function getIDBData(key, type) {
     if (!indexedDBReady) await initIndexedDB();
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(IDB_NAME, 1);
+        const request = indexedDB.open(IDB_NAME, 2);
         request.onsuccess = () => {
-            const db = request.result;
-            const tx = db.transaction(IDB_STORE, 'readonly');
+            const idb = request.result;
+            const tx = idb.transaction(IDB_STORE, 'readonly');
             const store = tx.objectStore(IDB_STORE);
             const getReq = store.get(key);
             getReq.onsuccess = () => resolve(getReq.result ? getReq.result.value : null);
             getReq.onerror = () => reject(getReq.error);
-            tx.oncomplete = () => db.close();
+            tx.oncomplete = () => idb.close();
         };
         request.onerror = () => reject(request.error);
     });
@@ -180,15 +218,15 @@ async function getIDBData(key, type) {
 async function setIDBData(key, value, type) {
     if (!indexedDBReady) await initIndexedDB();
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(IDB_NAME, 1);
+        const request = indexedDB.open(IDB_NAME, 2);
         request.onsuccess = () => {
-            const db = request.result;
-            const tx = db.transaction(IDB_STORE, 'readwrite');
+            const idb = request.result;
+            const tx = idb.transaction(IDB_STORE, 'readwrite');
             const store = tx.objectStore(IDB_STORE);
             const putReq = store.put({ key, value, type });
             putReq.onsuccess = () => resolve();
             putReq.onerror = () => reject(putReq.error);
-            tx.oncomplete = () => db.close();
+            tx.oncomplete = () => idb.close();
         };
         request.onerror = () => reject(request.error);
     });
@@ -197,15 +235,15 @@ async function setIDBData(key, value, type) {
 async function deleteIDBData(key) {
     if (!indexedDBReady) await initIndexedDB();
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(IDB_NAME, 1);
+        const request = indexedDB.open(IDB_NAME, 2);
         request.onsuccess = () => {
-            const db = request.result;
-            const tx = db.transaction(IDB_STORE, 'readwrite');
+            const idb = request.result;
+            const tx = idb.transaction(IDB_STORE, 'readwrite');
             const store = tx.objectStore(IDB_STORE);
             const delReq = store.delete(key);
             delReq.onsuccess = () => resolve();
             delReq.onerror = () => reject(delReq.error);
-            tx.oncomplete = () => db.close();
+            tx.oncomplete = () => idb.close();
         };
         request.onerror = () => reject(request.error);
     });
@@ -214,10 +252,10 @@ async function deleteIDBData(key) {
 async function getAllIDBDataByType(type) {
     if (!indexedDBReady) await initIndexedDB();
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(IDB_NAME, 1);
+        const request = indexedDB.open(IDB_NAME, 2);
         request.onsuccess = () => {
-            const db = request.result;
-            const tx = db.transaction(IDB_STORE, 'readonly');
+            const idb = request.result;
+            const tx = idb.transaction(IDB_STORE, 'readonly');
             const store = tx.objectStore(IDB_STORE);
             const index = store.index('type');
             const items = [];
@@ -232,37 +270,41 @@ async function getAllIDBDataByType(type) {
                 }
             };
             cursorReq.onerror = () => reject(cursorReq.error);
-            tx.oncomplete = () => db.close();
+            tx.oncomplete = () => idb.close();
         };
         request.onerror = () => reject(request.error);
     });
 }
 
-// ========== الواجهة الموحدة (تحتوي على SQLite + fallback إلى IndexedDB) ==========
-let useSQLite = true;
-
+// ========== الواجهة الموحدة ==========
 async function openDatabase() {
-    try {
-        await initSQLite();
-        useSQLite = true;
-        console.log('✅ باستخدام SQLite المحلي');
-        if (window.toast) window.toast('✅ قاعدة البيانات المحلية (SQLite) تعمل');
-    } catch (err) {
-        console.error('❌ فشل تفعيل SQLite، التحول إلى IndexedDB:', err);
-        useSQLite = false;
-        await initIndexedDB();
-        console.log('✅ باستخدام IndexedDB كبديل');
-        if (window.toast) window.toast('⚠️ تم استخدام IndexedDB بدلاً من SQLite (بعض الميزات قد تكون أبطأ)');
+    // التحقق من OPFS أولاً
+    await checkOPFSSupport();
+    if (opfsAvailable) {
+        try {
+            const success = await initSQLiteOnOPFS();
+            if (success) {
+                usingIndexedDB = false;
+                console.log('✅ باستخدام SQLite على OPFS');
+                return;
+            }
+        } catch (err) {
+            console.warn('⚠️ فشل SQLite على OPFS، التحول إلى IndexedDB:', err);
+        }
     }
+    // البديل: IndexedDB
+    usingIndexedDB = true;
+    await initIndexedDB();
+    console.log('✅ باستخدام IndexedDB (بديل آمن)');
 }
 
 // ========== دوال المستخدم ==========
 async function saveUser(user) {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         db.run(
-            'INSERT OR REPLACE INTO user (id, name, avatar, phone, supabaseId, isGuest) VALUES (?, ?, ?, ?, ?, ?)',
-            [user.id, user.name, user.avatar || '', user.phone || '', user.supabaseId || '', user.isGuest ? 1 : 0]
+            `INSERT OR REPLACE INTO user (id, name, avatar, phone, email, supabaseId, isGuest)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [user.id, user.name, user.avatar || '', user.phone || '', user.email || '', user.supabaseId || '', user.isGuest ? 1 : 0]
         );
     } else {
         await setIDBData('user', user, 'user');
@@ -270,8 +312,7 @@ async function saveUser(user) {
 }
 
 async function getUser() {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         const result = db.exec('SELECT * FROM user LIMIT 1');
         if (!result.length || !result[0].values.length) return null;
         const row = result[0].values[0];
@@ -280,8 +321,9 @@ async function getUser() {
             name: row[1],
             avatar: row[2],
             phone: row[3],
-            supabaseId: row[4],
-            isGuest: row[5] === 1
+            email: row[4],
+            supabaseId: row[5],
+            isGuest: row[6] === 1
         };
     } else {
         return await getIDBData('user', 'user');
@@ -289,8 +331,7 @@ async function getUser() {
 }
 
 async function deleteUser() {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         db.run('DELETE FROM user');
     } else {
         await deleteIDBData('user');
@@ -299,11 +340,10 @@ async function deleteUser() {
 
 // ========== دوال الرسائل ==========
 async function saveMessage(msg) {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         db.run(
-            `INSERT OR REPLACE INTO messages 
-             (id, chatId, senderId, senderName, text, mediaUrl, voiceUrl, voiceDuration, replyTo, timestamp, status) 
+            `INSERT OR REPLACE INTO messages
+             (id, chatId, senderId, senderName, text, mediaUrl, voiceUrl, voiceDuration, replyTo, timestamp, status)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 msg.id, msg.chatId, msg.senderId, msg.senderName || '', msg.text || '',
@@ -312,15 +352,20 @@ async function saveMessage(msg) {
             ]
         );
     } else {
-        const messages = await getIDBData(`messages_${msg.chatId}`, 'messages') || [];
-        messages.push(msg);
+        let messages = await getIDBData(`messages_${msg.chatId}`, 'messages') || [];
+        // تجنب التكرار
+        const existingIndex = messages.findIndex(m => m.id === msg.id);
+        if (existingIndex !== -1) {
+            messages[existingIndex] = msg;
+        } else {
+            messages.push(msg);
+        }
         await setIDBData(`messages_${msg.chatId}`, messages, 'messages');
     }
 }
 
 async function getMessages(chatId) {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         const result = db.exec('SELECT * FROM messages WHERE chatId = ? ORDER BY timestamp ASC', [chatId]);
         if (!result.length) return [];
         return result[0].values.map(row => ({
@@ -334,8 +379,7 @@ async function getMessages(chatId) {
 }
 
 async function deleteMessages(chatId) {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         db.run('DELETE FROM messages WHERE chatId = ?', [chatId]);
     } else {
         await deleteIDBData(`messages_${chatId}`);
@@ -343,53 +387,62 @@ async function deleteMessages(chatId) {
 }
 
 async function getAllChats() {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         const result = db.exec(
             `SELECT chatId, MAX(timestamp) as lastTime, COUNT(*) as totalMessages,
-                    SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as unread
+                    SUM(CASE WHEN status = 'sent' AND senderId != (SELECT id FROM user LIMIT 1) THEN 1 ELSE 0 END) as unread
              FROM messages GROUP BY chatId ORDER BY lastTime DESC`
         );
         if (!result.length) return [];
         return result[0].values.map(row => ({
-            chatId: row[0], lastTime: row[1], totalMessages: row[2], unread: row[3]
+            chatId: row[0],
+            lastTime: row[1],
+            totalMessages: row[2],
+            unread: row[3] || 0
         }));
     } else {
-        // IndexedDB: نقرأ كل مفاتيح الرسائل ونجمع البيانات
         const allItems = await getAllIDBDataByType('messages');
         const chatsMap = new Map();
+        const currentUser = await getUser();
+        const currentUserId = currentUser ? currentUser.id : null;
         for (const item of allItems) {
             const messages = item.value;
             if (messages && messages.length) {
                 const lastMsg = messages[messages.length - 1];
+                const unread = messages.filter(m => m.status === 'sent' && m.senderId !== currentUserId).length;
                 chatsMap.set(item.key.replace('messages_', ''), {
                     chatId: item.key.replace('messages_', ''),
                     lastTime: lastMsg.timestamp,
                     totalMessages: messages.length,
-                    unread: messages.filter(m => m.status === 'sent' && m.senderId !== 'me').length
+                    unread: unread
                 });
             }
         }
-        return Array.from(chatsMap.values()).sort((a,b) => new Date(b.lastTime) - new Date(a.lastTime));
+        return Array.from(chatsMap.values()).sort((a, b) => new Date(b.lastTime) - new Date(a.lastTime));
     }
 }
 
 // ========== دوال جهات الاتصال ==========
-async function addContact(phone, name) {
-    await openDatabase();
-    if (useSQLite) {
+async function addContact(phone, name, registered = false, supabaseId = '') {
+    if (!usingIndexedDB && db) {
         db.run('INSERT OR REPLACE INTO contacts (phone, name, registered, supabaseId) VALUES (?, ?, ?, ?)',
-            [phone, name || '', 0, '']);
+            [phone, name || '', registered ? 1 : 0, supabaseId]);
     } else {
-        const contacts = await getIDBData('contacts', 'contacts') || [];
-        contacts.push({ phone, name, registered: false, supabaseId: '' });
+        let contacts = await getIDBData('contacts', 'contacts') || [];
+        const existing = contacts.find(c => c.phone === phone);
+        if (existing) {
+            existing.name = name || existing.name;
+            existing.registered = registered;
+            existing.supabaseId = supabaseId;
+        } else {
+            contacts.push({ phone, name: name || '', registered, supabaseId });
+        }
         await setIDBData('contacts', contacts, 'contacts');
     }
 }
 
 async function getAllContacts() {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         const result = db.exec('SELECT * FROM contacts');
         if (!result.length || !result[0].values.length) return [];
         return result[0].values.map(row => ({
@@ -401,8 +454,7 @@ async function getAllContacts() {
 }
 
 async function updateContactRegistration(phone, registered, supabaseId) {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         db.run('UPDATE contacts SET registered = ?, supabaseId = ? WHERE phone = ?',
             [registered ? 1 : 0, supabaseId || '', phone]);
     } else {
@@ -417,8 +469,7 @@ async function updateContactRegistration(phone, registered, supabaseId) {
 }
 
 async function deleteContact(phone) {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         db.run('DELETE FROM contacts WHERE phone = ?', [phone]);
     } else {
         let contacts = await getIDBData('contacts', 'contacts') || [];
@@ -429,8 +480,7 @@ async function deleteContact(phone) {
 
 // ========== دوال الإعدادات ==========
 async function getSetting(key) {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         const result = db.exec('SELECT value FROM settings WHERE key = ?', [key]);
         if (!result.length || !result[0].values.length) return null;
         return result[0].values[0][0];
@@ -441,8 +491,7 @@ async function getSetting(key) {
 }
 
 async function setSetting(key, value) {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]);
     } else {
         let settings = await getIDBData('settings', 'settings') || {};
@@ -452,8 +501,7 @@ async function setSetting(key, value) {
 }
 
 async function deleteSetting(key) {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         db.run('DELETE FROM settings WHERE key = ?', [key]);
     } else {
         let settings = await getIDBData('settings', 'settings') || {};
@@ -464,15 +512,13 @@ async function deleteSetting(key) {
 
 // ========== دوال إضافية ==========
 async function deleteAllData() {
-    await openDatabase();
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         db.run('DELETE FROM messages');
         db.run('DELETE FROM contacts');
         db.run('DELETE FROM settings');
         db.run('DELETE FROM user');
     } else {
         await deleteIDBData('user');
-        // حذف جميع مفاتيح الرسائل
         const allItems = await getAllIDBDataByType('messages');
         for (const item of allItems) {
             await deleteIDBData(item.key);
@@ -483,7 +529,7 @@ async function deleteAllData() {
 }
 
 async function exportDatabase() {
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         const data = db.export();
         const blob = new Blob([data.buffer], { type: 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
@@ -492,8 +538,8 @@ async function exportDatabase() {
         a.download = `ramzapp_backup_${new Date().toISOString().slice(0, 10)}.sqlite`;
         a.click();
         URL.revokeObjectURL(url);
+        return true;
     } else {
-        // تصدير من IndexedDB كـ JSON
         const user = await getIDBData('user', 'user');
         const contacts = await getIDBData('contacts', 'contacts');
         const settings = await getIDBData('settings', 'settings');
@@ -506,20 +552,24 @@ async function exportDatabase() {
         a.download = `ramzapp_backup_${new Date().toISOString().slice(0, 10)}.json`;
         a.click();
         URL.revokeObjectURL(url);
+        return true;
     }
 }
 
 async function importDatabase(file) {
-    if (useSQLite) {
+    if (!usingIndexedDB && db) {
         const buffer = await file.arrayBuffer();
         db = new SQL.Database(new Uint8Array(buffer));
-        try {
-            const root = await navigator.storage.getDirectory();
-            const fileHandle = await root.getFileHandle(DB_FILENAME, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(buffer);
-            await writable.close();
-        } catch (e) { console.warn(e); }
+        // حفظ في OPFS
+        if (opfsAvailable) {
+            try {
+                const root = await navigator.storage.getDirectory();
+                const fileHandle = await root.getFileHandle(DB_FILENAME, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(buffer);
+                await writable.close();
+            } catch (e) { console.warn(e); }
+        }
         initTablesSQLite();
     } else {
         const text = await file.text();
@@ -535,7 +585,7 @@ async function importDatabase(file) {
     }
 }
 
-// ========== تصدير الواجهة ==========
+// ========== تصدير الواجهة العامة ==========
 window.RamzDB = {
     openDatabase,
     exportDatabase,
@@ -557,4 +607,4 @@ window.RamzDB = {
     deleteSetting
 };
 
-console.log('✅ RamzDB ready (with IndexedDB fallback)');
+console.log('✅ RamzDB جاهز (SQLite/IndexedDB)');
